@@ -43,7 +43,7 @@ int main(int argc, char **argv)
         for (int row = 0; row < NUMBER_ROWS; row++)
         {
             for (int col = 0; col < NUMBER_COLS; col++)
-            { // Creat a rect at pos ( 50, 50 ) that's 50 pixels wide and 50 pixels high.
+            { 
                 SDL_Rect r;
                 r.x = unit_to_pix_col(col);
                 r.y = unit_to_pix(row);
@@ -55,7 +55,6 @@ int main(int argc, char **argv)
                 // Render rect
                 SDL_RenderFillRect(renderer, &r);
 
-                // Set render color to blue ( rect will be rendered in this color )
                 if (board[col][row] != nullptr)
                 {
                     SDL_Rect piece_square_bckgrnd;
@@ -77,7 +76,7 @@ int main(int argc, char **argv)
                 }
             }
         }
-        SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255); //Couleur rouge
+        SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
 
         for (int row = 0; row < NUMBER_ROWS + 1; row++)
         {
