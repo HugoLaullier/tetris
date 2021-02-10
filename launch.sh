@@ -1,1 +1,0 @@
-g++ tetris.cpp -o tetris $(pkg-config --cflags --libs sdl2)

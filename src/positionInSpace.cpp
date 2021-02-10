@@ -1,5 +1,7 @@
 #include "headers/positionInSpace.hpp"
 
+PositionInSpace::PositionInSpace(){};
+
 PositionInSpace::PositionInSpace(std::vector<int> elements)
 {
     for (int i = 0; i < elements.size(); i++)
