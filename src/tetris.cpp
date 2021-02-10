@@ -14,16 +14,24 @@ int main(int argc, char **argv)
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
         return 1;
 
+    // Window
     SDL_Window *window = SDL_CreateWindow("Tetris", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, unit_to_pix_col(NUMBER_COLS + 5), unit_to_pix(NUMBER_ROWS), SDL_WINDOW_SHOWN);
+
+    // Renderer on the window
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
+    // Board
     Tetrimino *board[NUMBER_COLS][NUMBER_ROWS] = {nullptr};
-   
+
+    // Loop
     bool quit = false;
     while (!quit)
     {
+        // Background color (white)
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         SDL_RenderClear(renderer);
+
+        // Key management
         SDL_Event event;
         while (!quit && SDL_PollEvent(&event))
         {
@@ -50,21 +58,15 @@ int main(int argc, char **argv)
                 r.w = unit_to_pix(1);
                 r.h = unit_to_pix(1);
 
+                // Background color of the board (black)
                 SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
                 // Render rect
                 SDL_RenderFillRect(renderer, &r);
 
+                // Display tetrimino on the board
                 if (board[col][row] != nullptr)
                 {
-                    SDL_Rect piece_square_bckgrnd;
-                    piece_square_bckgrnd.x = unit_to_pix_col(col);
-                    piece_square_bckgrnd.y = unit_to_pix(row);
-                    piece_square_bckgrnd.w = unit_to_pix(1);
-                    piece_square_bckgrnd.h = unit_to_pix(1);
-                    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-                    SDL_RenderFillRect(renderer, &r);
-
                     int marge_square_piece = 1;
                     SDL_Rect piece_square;
                     piece_square.x = unit_to_pix_col(col) + marge_square_piece;
@@ -76,6 +78,8 @@ int main(int argc, char **argv)
                 }
             }
         }
+
+        // Display grid (lines in gray)
         SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
 
         for (int row = 0; row < NUMBER_ROWS + 1; row++)
@@ -87,7 +91,8 @@ int main(int argc, char **argv)
         {
             SDL_RenderDrawLine(renderer, unit_to_pix_col(col), 0, unit_to_pix_col(col), unit_to_pix(NUMBER_ROWS));
         }
-        // Render the rect to the screen
+        
+        // Render on the screen
         SDL_RenderPresent(renderer);
     }
 
