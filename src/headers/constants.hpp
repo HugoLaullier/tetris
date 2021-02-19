@@ -23,4 +23,18 @@
 */
 #define NUMBER_ROWS 20
 
+enum tile_name_t {tile_I, tile_O, tile_T, 
+    tile_L, tile_J, tile_Z, tile_S, tile_empty}; // TODO maybe rename ?
+
+#define QUEUE_SIZE 5
+#define NB_TETRIMONO QUEUE_SIZE+1
+
+#define DEFAULT_STARTING_POS_X 4
+#define DEFAULT_STARTING_POS_Y 0
+
+#define DEFAULT_GAME_SPEED 0.5
+#define KEY_INPUT_COUNTER 0.1 // delay between inputs
+
+enum rotate_dir_t {RIGHT, LEFT};
+
 #endif

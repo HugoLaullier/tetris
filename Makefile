@@ -1,6 +1,6 @@
 CC=g++
 CFLAGS= $(shell sdl2-config --cflags)
-LDFLAGS=  $(shell sdl2-config --libs)
+LDFLAGS=  $(shell sdl2-config --libs) -lSDL2_ttf
 EXEC=tetris
 SRC=src
 HEADERS=src/headers

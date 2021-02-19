@@ -27,9 +27,15 @@ public:
     /*!
      * \brief Constructeur de la classe Tetrimino avec la position des éléments formant le tetrimino
      * 
-     * \param elements : position de éléments formant le tetrimino (de 0 à 15), hors le pivot (qui se trouve à 6)
+     * \param elements :((((( position de éléments formant le tetrimino (de 0 à 15), hors le pivot (qui se trouve à 6)))))) 
+     * // TODO new initialisation comment
      */
-    PositionInSpace(std::vector<int> elements);
+    PositionInSpace(std::vector<std::vector<int>> position_);
+
+    PositionInSpace (const PositionInSpace & positionInSpace);
+
+    // return a bool indicating if the position i, j is occupied
+    bool get_position_i_j(int i, int j) const;
 
 private:
     int position[4][4] = {0}; /*!< les éléments d'un tetrimino dans un tableau 4X4*/
