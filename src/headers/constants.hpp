@@ -23,6 +23,8 @@
 */
 #define NUMBER_ROWS 20
 
+enum status_t {IN_GAME, QUIT, PLAY_1, PLAY_2, MENU, HELP}; 
+
 enum tile_name_t {tile_I, tile_O, tile_T, 
     tile_L, tile_J, tile_Z, tile_S, tile_empty}; // TODO maybe rename ?
 
