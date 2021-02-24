@@ -27,8 +27,7 @@ public:
     /*!
      * \brief Constructeur de la classe Tetrimino avec la position des éléments formant le tetrimino
      * 
-     * \param elements :((((( position de éléments formant le tetrimino (de 0 à 15), hors le pivot (qui se trouve à 6)))))) 
-     * // TODO new initialisation comment
+     * \param position_ : vector of coordinates in range [0,4[, [0,4[
      */
     PositionInSpace(std::vector<std::vector<int>> position_);
 

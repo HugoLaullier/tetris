@@ -2,32 +2,33 @@
 
 int unit_to_pix_col_board(int unit)
 {
-    return 30 * (unit + 5);
+    return 2 * TILE_SIZE_PX * unit + 2 * MARGIN_X + 5 * TILE_SIZE_PX;
 }
 
 int unit_to_pix_row_board(int unit)
 {
-    return 30 * unit;
+    return 2 * TILE_SIZE_PX * unit + MARGIN_Y;
 }
 
 int unit_to_pix_col_queue(int unit)
 {
-    return 15 * (unit + 37);
+    return TILE_SIZE_PX * unit + 3 * MARGIN_X 
+        + (5 + NUMBER_COLS*2) * TILE_SIZE_PX;
 }
 
 int unit_to_pix_row_queue(int unit)
 {
-    return 15 * unit;
+    return TILE_SIZE_PX * unit + MARGIN_Y;
 }
 
 int unit_to_pix_col_hold(int unit)
 {
-    return 15 * unit + 38;
+    return TILE_SIZE_PX * unit + MARGIN_X;
 }
 
 int unit_to_pix_row_hold(int unit)
 {
-    return 15 * unit;
+    return TILE_SIZE_PX * unit + MARGIN_Y;
 }
 
 bool is_in_board(int x, int y)
@@ -106,4 +107,20 @@ std::vector<int> get_color_from_tile_name(tile_name_t tile)
     perror("");
 
     exit(EXIT_FAILURE);
+}
+void render_text(SDL_Renderer *renderer, TTF_Font *font, 
+                 int x, int y, const char *text)
+{
+    SDL_Surface *message =
+        TTF_RenderText_Shaded(font, text, {0, 0, 0}, {255, 255, 255});
+    //TTF_RenderText_Blended(font, text, {0, 0, 0}); // (slower)
+    SDL_Texture *texture =
+        SDL_CreateTextureFromSurface(renderer, message);
+    int texW = 0;
+    int texH = 0;
+    SDL_QueryTexture(texture, NULL, NULL, &texW, &texH);
+    SDL_Rect rect = {x, y, texW, texH};
+    SDL_RenderCopy(renderer, texture, NULL, &rect);
+    SDL_FreeSurface(message);
+    SDL_DestroyTexture(texture);
 }

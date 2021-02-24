@@ -23,4 +23,5 @@ tetrimino.o: $(SRC)/tetrimino.cpp $(HEADERS)/tetrimino.hpp $(HEADERS)/positionIn
 	$(CC) -o $@ -c $< $(CFLAGS)
 
 clean:
+	rm tetris
 	rm -rf *.o

@@ -11,6 +11,8 @@
 #include <vector>
 #include <iostream>
 #include <stdarg.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #include "constants.hpp"
 
 /*!
@@ -27,9 +29,13 @@ int unit_to_pix_col_board(int unit);
 */
 int unit_to_pix_row_board(int unit);
 
+/*---------------------*/
+
 int unit_to_pix_col_queue(int unit);
 
 int unit_to_pix_row_queue(int unit);
+
+/*---------------------*/
 
 int unit_to_pix_col_hold(int unit);
 
@@ -46,5 +52,8 @@ std::vector<int> get_color_from_tile_name(tile_name_t tile);
 [[ noreturn ]] void handle_error(const char * msg, ...);
 
 [[ noreturn ]] void handle_perror(const char * msg, ...);
+
+void render_text(SDL_Renderer *renderer, TTF_Font *font, 
+                 int x, int y, const char *text);
 
 #endif
