@@ -30,7 +30,7 @@
 enum status_t {IN_GAME, QUIT, PLAY_1, PLAY_2, PLAY_3, MENU, HELP}; 
 
 enum tile_name_t {tile_I, tile_O, tile_T, 
-    tile_L, tile_J, tile_Z, tile_S, tile_empty};
+    tile_L, tile_J, tile_Z, tile_S, tile_empty, title_add_line};
 
 #define QUEUE_SIZE 5
 #define NB_TETRIMONO QUEUE_SIZE+1
@@ -48,9 +48,9 @@ enum rotate_dir_t {RIGHT, LEFT};
 enum input_t {INPUT_RIGHT, INPUT_LEFT, INPUT_UP, INPUT_DOWN, INPUT_CTRL,
               INPUT_C, INPUT_SPACE, INPUT_NONE};
 
-#define DIFFICULTY_EASY 5
-#define DIFFICULTY_NORMAL 3
-#define DIFFICULTY_HARD 1.5
+#define DIFFICULTY_EASY 8
+#define DIFFICULTY_NORMAL 4
+#define DIFFICULTY_HARD 2
 #define DIFFICULTY_IMPOSSIBLE 0
 
 #define COMPUTE_FPS true

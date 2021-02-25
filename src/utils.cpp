@@ -12,8 +12,7 @@ int unit_to_pix_row_board(int unit)
 
 int unit_to_pix_col_queue(int unit)
 {
-    return TILE_SIZE_PX * unit + 3 * MARGIN_X 
-        + (5 + NUMBER_COLS*2) * TILE_SIZE_PX;
+    return TILE_SIZE_PX * unit + 3 * MARGIN_X + (5 + NUMBER_COLS * 2) * TILE_SIZE_PX;
 }
 
 int unit_to_pix_row_queue(int unit)
@@ -33,7 +32,7 @@ int unit_to_pix_row_hold(int unit)
 
 bool is_in_board(int x, int y)
 {
-    return x >= 0 && y >= 0 && x < NUMBER_COLS && y < NUMBER_ROWS ;
+    return x >= 0 && y >= 0 && x < NUMBER_COLS && y < NUMBER_ROWS;
 }
 
 std::vector<int> get_color_from_tile_name(tile_name_t tile)
@@ -75,6 +74,11 @@ std::vector<int> get_color_from_tile_name(tile_name_t tile)
         color.push_back(253);
         color.push_back(56);
         break;
+    case title_add_line:
+        color.push_back(100);
+        color.push_back(100);
+        color.push_back(100);
+        break;
     default:
         color.push_back(0);
         color.push_back(0);
@@ -84,7 +88,8 @@ std::vector<int> get_color_from_tile_name(tile_name_t tile)
     return color;
 }
 
-[[ noreturn ]] void handle_error(const char * msg, ...) {
+[[noreturn]] void handle_error(const char *msg, ...)
+{
     va_list ap;
 
     va_start(ap, msg);
@@ -96,7 +101,8 @@ std::vector<int> get_color_from_tile_name(tile_name_t tile)
     exit(EXIT_FAILURE);
 }
 
-[[ noreturn ]] void handle_perror(const char * msg, ...) {
+[[noreturn]] void handle_perror(const char *msg, ...)
+{
     va_list ap;
 
     va_start(ap, msg);
@@ -108,7 +114,7 @@ std::vector<int> get_color_from_tile_name(tile_name_t tile)
 
     exit(EXIT_FAILURE);
 }
-void render_text(SDL_Renderer *renderer, TTF_Font *font, 
+void render_text(SDL_Renderer *renderer, TTF_Font *font,
                  int x, int y, const char *text)
 {
     SDL_Surface *message =

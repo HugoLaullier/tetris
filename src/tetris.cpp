@@ -37,6 +37,8 @@ protected:
     std::vector<Tetrimino *> queue_tetrimino;
     tile_name_t board[NUMBER_COLS][NUMBER_ROWS];
     SDL_Renderer *renderer;
+    int send_lines;
+
 public:
     // constructor
     Player(SDL_Renderer *renderer_, int player_number_, int offset_x_);
@@ -67,11 +69,15 @@ public:
     void fast_down();
     bool rotate(rotate_dir_t dir);
     // display score, level, line completed
-    void display_player_info(TTF_Font *font);
+    virtual void display_player_info(TTF_Font *font) = 0;
     void keyboard(const Uint8 *keys);
     virtual void handle_player_input(double difficulty,
                                      double *counter,
                                      double *counter_input_delay) = 0;
+    virtual void display_projection() = 0;
+    int get_send_lines();
+    void reset_send_lines();
+    void receive_lines(int nb_lines);
 };
 
 /*-------------------------------------------------------------------*/
@@ -83,13 +89,13 @@ public:
     void handle_player_input(double difficulty,
                              double *counter,
                              double *counter_input_delay) override;
+    void display_projection() override;
+    void display_player_info(TTF_Font *font) override;
 };
 
-
-Human_player::Human_player (SDL_Renderer *renderer_, 
-                            int player_number_, 
-                            int offset_x_) : 
-    Player(renderer_, player_number_, offset_x_) {}
+Human_player::Human_player(SDL_Renderer *renderer_,
+                           int player_number_,
+                           int offset_x_) : Player(renderer_, player_number_, offset_x_) {}
 
 void Human_player::handle_player_input(double difficulty,
                                        double *counter,
@@ -112,15 +118,82 @@ void Human_player::handle_player_input(double difficulty,
     }
 }
 
+void Human_player::display_projection()
+{
+    bool can_move_down = true;
+    int pos[4][2];
+    current_tetrimino->get_position(&pos);
+    while (can_move_down)
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            if (pos[i][1] + 1 >= 0 &&
+                (board[pos[i][0]][pos[i][1] + 1] != tile_empty ||
+                 pos[i][1] + 1 >= NUMBER_ROWS))
+            {
+                can_move_down = false;
+            }
+        }
+        if (can_move_down)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                pos[i][1] += 1;
+            }
+        }
+    }
+
+    for (int i = 0; i < 4; i++)
+    {
+        if (pos[i][1] >= 0)
+        {
+            std::vector<int> color = current_tetrimino->get_color();
+            SDL_SetRenderDrawColor(
+                renderer, color[0], color[1], color[2], 255);
+            SDL_RenderDrawLine(renderer, offset_x + unit_to_pix_col_board(pos[i][0]), unit_to_pix_row_board(pos[i][1]), offset_x + unit_to_pix_col_board(pos[i][0]) + TILE_SIZE_PX * 2, unit_to_pix_row_board(pos[i][1]));
+            SDL_RenderDrawLine(renderer, offset_x + unit_to_pix_col_board(pos[i][0]), unit_to_pix_row_board(pos[i][1]), offset_x + unit_to_pix_col_board(pos[i][0]), unit_to_pix_row_board(pos[i][1]) + TILE_SIZE_PX * 2);
+            SDL_RenderDrawLine(renderer, offset_x + unit_to_pix_col_board(pos[i][0]) + TILE_SIZE_PX * 2, unit_to_pix_row_board(pos[i][1]), offset_x + unit_to_pix_col_board(pos[i][0]) + TILE_SIZE_PX * 2, unit_to_pix_row_board(pos[i][1]) + TILE_SIZE_PX * 2);
+            SDL_RenderDrawLine(renderer, offset_x + unit_to_pix_col_board(pos[i][0]), unit_to_pix_row_board(pos[i][1]) + TILE_SIZE_PX * 2, offset_x + unit_to_pix_col_board(pos[i][0]) + TILE_SIZE_PX * 2, unit_to_pix_row_board(pos[i][1]) + TILE_SIZE_PX * 2);
+        }
+    }
+}
+
+void Human_player::display_player_info(TTF_Font *font)
+{
+    int offset_y = 300;
+    char *text = new char[BUFF_SIZE];
+    render_text(renderer, font, offset_x + MARGIN_X, offset_y, "Score :");
+    CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "%i", score));
+    render_text(renderer, font, offset_x + MARGIN_X, offset_y + 40, text);
+    render_text(renderer, font, offset_x + MARGIN_X, offset_y + 80, "Lines :");
+    CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "%i", line_completed));
+    render_text(renderer, font, offset_x + MARGIN_X, offset_y + 120, text);
+    render_text(renderer, font, offset_x + MARGIN_X, offset_y + 160, "Level :");
+    if (level == LEVEL_MAX)
+        CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "max"));
+    else
+        CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "%i", level));
+    render_text(renderer, font, offset_x + MARGIN_X, offset_y + 200, text);
+    render_text(renderer, font, offset_x + MARGIN_X, 150, "Press C");
+    render_text(renderer, font, offset_x + MARGIN_X, 180, "to hold");
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderDrawLine(renderer, offset_x + MARGIN_X, offset_y + 255, offset_x + unit_to_pix_col_board(0) - MARGIN_X, offset_y + 255);
+    int width_text;
+    TTF_SizeText(font, "You", &width_text, NULL);
+    render_text(renderer, font, offset_x + unit_to_pix_col_board(0) / 2 - width_text / 2, offset_y + 270, "You");
+    delete[] text;
+}
+
 /*-------------------------------------------------------------------*/
 class AI_player : public Player
 {
 private:
     bool is_first_move = true;
     std::vector<input_t> input_queue;
+
 public:
     // constructor
-    AI_player (SDL_Renderer *renderer_, int player_number_, int offset_x_);
+    AI_player(SDL_Renderer *renderer_, int player_number_, int offset_x_);
     // get
     bool get_is_first_move() const;
     void set_is_first_move(bool value);
@@ -137,17 +210,17 @@ public:
     bool is_move_down_valid(
         tile_name_t test_board[NUMBER_COLS][NUMBER_ROWS],
         int test_pos[4][2]) const;
-    
+
     bool is_in_board_tetrimino(
         tile_name_t test_board[NUMBER_COLS][NUMBER_ROWS],
         int test_pos[4][2]) const;
-    
+
     void reset_test_board(
         tile_name_t (*test_board)[NUMBER_COLS][NUMBER_ROWS]) const;
-    
+
     double evaluate_board(
         tile_name_t test_board[NUMBER_COLS][NUMBER_ROWS]) const;
-    
+
     void compute_scores(
         Tetrimino *test_tetrimino,
         double (*scores)[2][4][NUMBER_COLS + 2], int hold) const;
@@ -155,19 +228,20 @@ public:
     void handle_player_input(double difficulty,
                              double *counter,
                              double *counter_input_delay) override;
+    void display_projection() override;
+    void display_player_info(TTF_Font *font) override;
 };
 
-AI_player::AI_player (SDL_Renderer *renderer_, 
-                      int player_number_, 
-                      int offset_x_) : 
-    Player(renderer_, player_number_, offset_x_) {}
+AI_player::AI_player(SDL_Renderer *renderer_,
+                     int player_number_,
+                     int offset_x_) : Player(renderer_, player_number_, offset_x_) {}
 
 void AI_player::handle_player_input(double difficulty,
                                     double *counter,
                                     double *counter_input_delay)
 {
     // if it's a new tetrimino then the AI compute the best moves
-    // and create a list of input that place the tetrimino in the 
+    // and create a list of input that place the tetrimino in the
     // correct spot
     if (get_is_new_tetrimino())
     {
@@ -186,8 +260,7 @@ void AI_player::handle_player_input(double difficulty,
     }
     // computed inputs are played and respect the minimum delay between
     // inputs (AI can't play too fast) -> adjusted with difficulty
-    if (*counter_input_delay > KEY_INPUT_COUNTER * difficulty
-        && !get_input_queue().empty())
+    if (*counter_input_delay > KEY_INPUT_COUNTER * difficulty && !get_input_queue().empty())
     {
         *counter_input_delay = 0;
         input_t input = pop_input_queue();
@@ -204,16 +277,42 @@ void AI_player::handle_player_input(double difficulty,
     }
 }
 
-Player::Player (SDL_Renderer *renderer_, int player_number_, int offset_x_) : 
-    renderer(renderer_),
-    player_number(player_number_),
-    offset_x(offset_x_),
-    current_tetrimino(nullptr),
-    speed(DEFAULT_GAME_SPEED),
-    line_completed(0),
-    level(1),
-    score(0),
-    hold(nullptr)
+void AI_player::display_projection() {}
+
+void AI_player::display_player_info(TTF_Font *font)
+{
+    int offset_y = 300;
+    char *text = new char[BUFF_SIZE];
+    render_text(renderer, font, offset_x + MARGIN_X, offset_y, "Score :");
+    CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "%i", score));
+    render_text(renderer, font, offset_x + MARGIN_X, offset_y + 40, text);
+    render_text(renderer, font, offset_x + MARGIN_X, offset_y + 80, "Lines :");
+    CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "%i", line_completed));
+    render_text(renderer, font, offset_x + MARGIN_X, offset_y + 120, text);
+    render_text(renderer, font, offset_x + MARGIN_X, offset_y + 160, "Level :");
+    if (level == LEVEL_MAX)
+        CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "max"));
+    else
+        CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "%i", level));
+    render_text(renderer, font, offset_x + MARGIN_X, offset_y + 200, text);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderDrawLine(renderer, offset_x + MARGIN_X, offset_y + 255, offset_x + unit_to_pix_col_board(0) - MARGIN_X, offset_y + 255);
+    int width_text;
+    TTF_SizeText(font, "AI", &width_text, NULL);
+    render_text(renderer, font, offset_x + unit_to_pix_col_board(0) / 2 - width_text / 2, offset_y + 270, "AI");
+    delete[] text;
+}
+
+Player::Player(SDL_Renderer *renderer_, int player_number_, int offset_x_) : renderer(renderer_),
+                                                                             player_number(player_number_),
+                                                                             offset_x(offset_x_),
+                                                                             current_tetrimino(nullptr),
+                                                                             speed(DEFAULT_GAME_SPEED),
+                                                                             line_completed(0),
+                                                                             level(1),
+                                                                             score(0),
+                                                                             hold(nullptr),
+                                                                             send_lines(0)
 {
     for (int i = 0; i < NUMBER_COLS; i++)
         for (int j = 0; j < NUMBER_ROWS; j++)
@@ -224,14 +323,30 @@ Player::Player (SDL_Renderer *renderer_, int player_number_, int offset_x_) :
         int r = rand() % 7;
         switch (r)
         {
-        case 0:  queue_tetrimino.push_back(new I); break;
-        case 1:  queue_tetrimino.push_back(new O); break;
-        case 2:  queue_tetrimino.push_back(new T); break;
-        case 3:  queue_tetrimino.push_back(new L); break;
-        case 4:  queue_tetrimino.push_back(new J); break;
-        case 5:  queue_tetrimino.push_back(new Z); break;
-        case 6:  queue_tetrimino.push_back(new S); break;
-        default: queue_tetrimino.push_back(new I); break;
+        case 0:
+            queue_tetrimino.push_back(new I);
+            break;
+        case 1:
+            queue_tetrimino.push_back(new O);
+            break;
+        case 2:
+            queue_tetrimino.push_back(new T);
+            break;
+        case 3:
+            queue_tetrimino.push_back(new L);
+            break;
+        case 4:
+            queue_tetrimino.push_back(new J);
+            break;
+        case 5:
+            queue_tetrimino.push_back(new Z);
+            break;
+        case 6:
+            queue_tetrimino.push_back(new S);
+            break;
+        default:
+            queue_tetrimino.push_back(new I);
+            break;
         }
     }
     current_tetrimino = queue_tetrimino[0];
@@ -266,7 +381,6 @@ bool Player::get_is_game_over() const
 {
     return is_game_over;
 }
-
 
 bool Player::get_is_new_tetrimino() const
 {
@@ -413,14 +527,30 @@ void Player::new_tetrimino()
     //int r = 0;
     switch (r)
     {
-    case 0:  queue_tetrimino.push_back(new I); break;
-    case 1:  queue_tetrimino.push_back(new O); break;
-    case 2:  queue_tetrimino.push_back(new T); break;
-    case 3:  queue_tetrimino.push_back(new L); break;
-    case 4:  queue_tetrimino.push_back(new J); break;
-    case 5:  queue_tetrimino.push_back(new Z); break;
-    case 6:  queue_tetrimino.push_back(new S); break;
-    default: queue_tetrimino.push_back(new I); break;
+    case 0:
+        queue_tetrimino.push_back(new I);
+        break;
+    case 1:
+        queue_tetrimino.push_back(new O);
+        break;
+    case 2:
+        queue_tetrimino.push_back(new T);
+        break;
+    case 3:
+        queue_tetrimino.push_back(new L);
+        break;
+    case 4:
+        queue_tetrimino.push_back(new J);
+        break;
+    case 5:
+        queue_tetrimino.push_back(new Z);
+        break;
+    case 6:
+        queue_tetrimino.push_back(new S);
+        break;
+    default:
+        queue_tetrimino.push_back(new I);
+        break;
     }
     // set the position for the new tetrimino
     int x = current_tetrimino->get_x();
@@ -467,9 +597,21 @@ void Player::new_tetrimino()
     if (line_completed >= level * 10 && level < LEVEL_MAX)
     {
         level++;
-        static double a = 
+        static double a =
             ((DEFAULT_GAME_SPEED / 2) - DEFAULT_GAME_SPEED) / LEVEL_MAX;
         speed = a * level + DEFAULT_GAME_SPEED; // increase speed linearly
+    }
+    if (line_full.size() == 2)
+    {
+        send_lines = 1;
+    }
+    else if (line_full.size() == 3)
+    {
+        send_lines = 2;
+    }
+    else if (line_full.size() == 4)
+    {
+        send_lines = 4;
     }
     switch (line_full.size())
     {
@@ -617,7 +759,8 @@ bool Player::move_right()
 
 void Player::fast_down()
 {
-    while (move_down());
+    while (move_down())
+        ;
     new_tetrimino();
 }
 
@@ -729,27 +872,76 @@ void Player::keyboard(const Uint8 *keys)
     }
 }
 
+int Player::get_send_lines()
+{
+    return send_lines;
+}
+
+void Player::reset_send_lines()
+{
+    send_lines = 0;
+}
+
+void Player::receive_lines(int nb_lines)
+{
+    for (int i = 0; i < nb_lines; i++)
+    {
+        for (int row = 1; row < NUMBER_ROWS; row++)
+        {
+            for (int col = 0; col < NUMBER_COLS; col++)
+            {
+                if (board[col][row] != tile_empty)
+                {
+                    board[col][row - 1] = board[col][row];
+                    board[col][row] = tile_empty;
+                }
+            }
+        }
+        int hole = rand() % NUMBER_COLS;
+        for (int col = 0; col < NUMBER_COLS; col++)
+        {
+            if (col != hole)
+                board[col][NUMBER_ROWS - 1] = title_add_line;
+        }
+    }
+}
+
 Uint8 *AI_player::simulate_keyboard_input(input_t input) const
 {
     Uint8 *keys;
     keys = new Uint8[BUFF_SIZE];
     keys[SDL_SCANCODE_RIGHT] = 0;
-    keys[SDL_SCANCODE_LEFT]  = 0;
-    keys[SDL_SCANCODE_UP]    = 0;
-    keys[SDL_SCANCODE_DOWN]  = 0;
+    keys[SDL_SCANCODE_LEFT] = 0;
+    keys[SDL_SCANCODE_UP] = 0;
+    keys[SDL_SCANCODE_DOWN] = 0;
     keys[SDL_SCANCODE_LCTRL] = 0;
-    keys[SDL_SCANCODE_C]     = 0;
+    keys[SDL_SCANCODE_C] = 0;
     keys[SDL_SCANCODE_SPACE] = 0;
     switch (input)
     {
-    case INPUT_RIGHT: keys[SDL_SCANCODE_RIGHT] = (Uint8)1; break;
-    case INPUT_LEFT:  keys[SDL_SCANCODE_LEFT]  = (Uint8)1; break;
-    case INPUT_UP:    keys[SDL_SCANCODE_UP]    = (Uint8)1; break;
-    case INPUT_DOWN:  keys[SDL_SCANCODE_DOWN]  = (Uint8)1; break;
-    case INPUT_CTRL:  keys[SDL_SCANCODE_LCTRL] = (Uint8)1; break;
-    case INPUT_C:     keys[SDL_SCANCODE_C]     = (Uint8)1; break;
-    case INPUT_SPACE: keys[SDL_SCANCODE_SPACE] = (Uint8)1; break;
-    default: break;
+    case INPUT_RIGHT:
+        keys[SDL_SCANCODE_RIGHT] = (Uint8)1;
+        break;
+    case INPUT_LEFT:
+        keys[SDL_SCANCODE_LEFT] = (Uint8)1;
+        break;
+    case INPUT_UP:
+        keys[SDL_SCANCODE_UP] = (Uint8)1;
+        break;
+    case INPUT_DOWN:
+        keys[SDL_SCANCODE_DOWN] = (Uint8)1;
+        break;
+    case INPUT_CTRL:
+        keys[SDL_SCANCODE_LCTRL] = (Uint8)1;
+        break;
+    case INPUT_C:
+        keys[SDL_SCANCODE_C] = (Uint8)1;
+        break;
+    case INPUT_SPACE:
+        keys[SDL_SCANCODE_SPACE] = (Uint8)1;
+        break;
+    default:
+        break;
     }
     return keys;
 }
@@ -759,9 +951,9 @@ bool AI_player::is_move_down_valid(
     int test_pos[4][2]) const
 {
     for (int i = 0; i < 4; i++)
-        if (test_pos[i][1]+1 >= NUMBER_ROWS ||
-            test_board[test_pos[i][0]][test_pos[i][1]+1] != tile_empty)
-                return false;
+        if (test_pos[i][1] + 1 >= NUMBER_ROWS ||
+            test_board[test_pos[i][0]][test_pos[i][1] + 1] != tile_empty)
+            return false;
     return true;
 }
 
@@ -834,18 +1026,15 @@ double AI_player::evaluate_board(
     {
         for (int j = NUMBER_ROWS - height_board[i]; j < NUMBER_ROWS; j++)
             if (test_board[i][j] == tile_empty)
-                nb_holes ++;
+                nb_holes++;
     }
     // 3 - spikyness
     for (int i = 0; i < NUMBER_COLS - 1; i++)
     {
         spikyness += abs(height_board[i] - height_board[i + 1]);
     }
-    
-    return  2 * max_height 
-            + 1.5 *nb_holes 
-            + 0.5 * spikyness 
-            - 4 * nb_completed_lines;
+
+    return 2 * max_height + 1.5 * nb_holes + 0.5 * spikyness - 4 * nb_completed_lines;
 }
 
 void AI_player::compute_scores(
@@ -869,8 +1058,8 @@ void AI_player::compute_scores(
             int count_in_board = 0;
             for (int k = 0; k < 4; k++)
                 if (test_pos[k][0] >= 0 && test_pos[k][0] < NUMBER_COLS)
-                    count_in_board ++;
-            
+                    count_in_board++;
+
             if (count_in_board == 4)
             {
                 int score = 0;
@@ -980,10 +1169,11 @@ std::vector<input_t> AI_player::compute_best_move() const
         moves.push_back(INPUT_NONE);
         moves.push_back(INPUT_UP);
         moves.push_back(INPUT_NONE);
-    default: break;
+    default:
+        break;
     }
 
-    int delta_x =  min_x - current_tetrimino->get_x() - 2;
+    int delta_x = min_x - current_tetrimino->get_x() - 2;
     // add moves along x axis
     if (delta_x < 0)
     {
@@ -995,32 +1185,11 @@ std::vector<input_t> AI_player::compute_best_move() const
         for (int i = 0; i < delta_x; i++)
             moves.push_back(INPUT_RIGHT);
     }
-    
+
     // add fast drop
     moves.push_back(INPUT_SPACE);
     std::reverse(moves.begin(), moves.end());
     return moves;
-}
-
-void Player::display_player_info(TTF_Font *font)
-{
-    int offset_y = 300;
-    char *text = new char[BUFF_SIZE];
-    render_text(renderer, font, offset_x + MARGIN_X, offset_y, "Score :");
-    CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "%i", score));
-    render_text(renderer, font, offset_x + MARGIN_X, offset_y + 40, text);
-    render_text(renderer, font, offset_x + MARGIN_X, offset_y + 80, "Lines :");
-    CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "%i", line_completed));
-    render_text(renderer, font, offset_x + MARGIN_X, offset_y + 120, text);
-    render_text(renderer, font, offset_x + MARGIN_X, offset_y + 160, "Level :");
-    if (level == LEVEL_MAX)
-        CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "max"));
-    else
-        CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "%i", level));
-    render_text(renderer, font, offset_x + MARGIN_X, offset_y + 200, text);
-    render_text(renderer, font, offset_x + MARGIN_X, 150, "Press C");
-    render_text(renderer, font, offset_x + MARGIN_X, 180, "to hold");
-    delete[] text;
 }
 
 /*-------------------------------------------------------------------*/
@@ -1040,14 +1209,14 @@ private:
     status_t self_status; // PLAY_1 or PLAY_2 or PLAY_3
 
 public:
-    Game (SDL_Window *window, SDL_Renderer *renderer, 
-          TTF_Font *font,TTF_Font *font_small,
-          int window_w, int window_h, status_t status, double difficulty,
-          Player *player);
-    Game (SDL_Window *window, SDL_Renderer *renderer,
-          TTF_Font *font,TTF_Font *font_small,
-          int window_w, int window_h, status_t status, double difficulty,
-          Player *p1, Player *p2);
+    Game(SDL_Window *window, SDL_Renderer *renderer,
+         TTF_Font *font, TTF_Font *font_small,
+         int window_w, int window_h, status_t status, double difficulty,
+         Player *player);
+    Game(SDL_Window *window, SDL_Renderer *renderer,
+         TTF_Font *font, TTF_Font *font_small,
+         int window_w, int window_h, status_t status, double difficulty,
+         Player *p1, Player *p2);
     void display_fps(double fps) const;
     void display_results(int winner) const;
     void display_board_grid() const;
@@ -1055,45 +1224,43 @@ public:
     void display_hold_background() const;
     void display_queue_grid() const;
     void display_queue_background() const;
-    void game_loop (status_t *status, 
-                    double *delta_t,
-                    double *counter_p1, 
-                    double *counter_p2,
-                    double *counter_input_delay_p1,
-                    double *counter_input_delay_p2);
-    void score_screen_loop (status_t *status);
+    void game_loop(status_t *status,
+                   double *delta_t,
+                   double *counter_p1,
+                   double *counter_p2,
+                   double *counter_input_delay_p1,
+                   double *counter_input_delay_p2);
+    void score_screen_loop(status_t *status);
     status_t play();
 };
 
-Game::Game (SDL_Window *window, SDL_Renderer *renderer,
-            TTF_Font *font,TTF_Font *font_small,
-            int window_w, int window_h, status_t status, double difficulty,
-            Player *player) : 
-    window(window), 
-    renderer(renderer),
-    font(font),
-    font_small(font_small),
-    window_w(window_w),
-    window_h(window_h),
-    self_status(status),
-    difficulty(difficulty),
-    player_1(player),
-    player_2(nullptr){}
+Game::Game(SDL_Window *window, SDL_Renderer *renderer,
+           TTF_Font *font, TTF_Font *font_small,
+           int window_w, int window_h, status_t status, double difficulty,
+           Player *player) : window(window),
+                             renderer(renderer),
+                             font(font),
+                             font_small(font_small),
+                             window_w(window_w),
+                             window_h(window_h),
+                             self_status(status),
+                             difficulty(difficulty),
+                             player_1(player),
+                             player_2(nullptr) {}
 
-Game::Game (SDL_Window *window, SDL_Renderer *renderer,
-            TTF_Font *font,TTF_Font *font_small,
-            int window_w, int window_h, status_t status, double difficulty,
-            Player *p1, Player *p2) : 
-    window(window), 
-    renderer(renderer),
-    font(font),
-    font_small(font_small),
-    window_w(window_w),
-    window_h(window_h),
-    self_status(status),
-    difficulty(difficulty),
-    player_1(p1),
-    player_2(p2) {}
+Game::Game(SDL_Window *window, SDL_Renderer *renderer,
+           TTF_Font *font, TTF_Font *font_small,
+           int window_w, int window_h, status_t status, double difficulty,
+           Player *p1, Player *p2) : window(window),
+                                     renderer(renderer),
+                                     font(font),
+                                     font_small(font_small),
+                                     window_w(window_w),
+                                     window_h(window_h),
+                                     self_status(status),
+                                     difficulty(difficulty),
+                                     player_1(p1),
+                                     player_2(p2) {}
 
 void Game::display_fps(double fps) const
 {
@@ -1109,44 +1276,126 @@ void Game::display_results(int winner) const
     // 0 -> solo play -> game over
     // 1 -> multi -> player 1 win -> both score diplayed
     // 2 -> multi -> player 2 win -> both score diplayed
-    printf("winner : %i\n", winner);
+
     int offset_y = 80;
     char *text = new char[BUFF_SIZE];
     int width_text;
-    TTF_SetFontStyle(font, TTF_STYLE_BOLD);
-    TTF_SizeText(font, "GAME OVER", &width_text, NULL);
-    render_text(renderer, font, 
-                unit_to_pix_col_board(NUMBER_COLS+5)/2 - width_text/2, 
-                offset_y, "GAME OVER");
-    TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
-    CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "Score : %i", 
-        player_1->get_score()));
-    TTF_SizeText(font, text, &width_text, NULL);
-    render_text(renderer, font, 
-                unit_to_pix_col_board(NUMBER_COLS+5)/2 - width_text/2, 
-                offset_y + 110, text);
-    CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "Lines : %i", 
-        player_1->get_line_completed()));
-    TTF_SizeText(font, text, &width_text, NULL);
-    render_text(renderer, font, 
-                unit_to_pix_col_board(NUMBER_COLS+5)/2 - width_text/2, 
-                offset_y + 160, text);
-    if (player_1->get_level() == LEVEL_MAX)
-        CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "Level : max"));
+
+    if (winner == 0)
+    {
+        TTF_SetFontStyle(font, TTF_STYLE_BOLD);
+        TTF_SizeText(font, "GAME OVER", &width_text, NULL);
+        render_text(renderer, font,
+                    unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
+                    offset_y, "GAME OVER");
+        TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
+        CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "Score : %i",
+                                player_1->get_score()));
+        TTF_SizeText(font, text, &width_text, NULL);
+        render_text(renderer, font,
+                    unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
+                    offset_y + 110, text);
+        CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "Lines : %i",
+                                player_1->get_line_completed()));
+        TTF_SizeText(font, text, &width_text, NULL);
+        render_text(renderer, font,
+                    unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
+                    offset_y + 160, text);
+        if (player_1->get_level() == LEVEL_MAX)
+            CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "Level : max"));
+        else
+            CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "Level : %i",
+                                    player_1->get_level()));
+        TTF_SizeText(font, text, &width_text, NULL);
+        render_text(renderer, font,
+                    unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
+                    offset_y + 210, text);
+    }
     else
-        CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "Level : %i",
-            player_1->get_level()));
-    TTF_SizeText(font, text, &width_text, NULL);
-    render_text(renderer, font, 
-                unit_to_pix_col_board(NUMBER_COLS+5)/2 - width_text/2, 
-                offset_y + 210, text);
+    {
+        if (winner == 1)
+        {
+            TTF_SetFontStyle(font, TTF_STYLE_BOLD);
+            TTF_SizeText(font, "YOU ARE THE WINNER!", &width_text, NULL);
+            render_text(renderer, font,
+                        unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
+                        offset_y, "YOU ARE THE WINNER!");
+            TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
+        }
+        else
+        {
+            TTF_SetFontStyle(font, TTF_STYLE_BOLD);
+            TTF_SizeText(font, "YOUR ENNEMY IS THE WINNER!", &width_text, NULL);
+            render_text(renderer, font,
+                        unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
+                        offset_y, "YOUR ENNEMY IS THE WINNER!");
+            TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
+        }
+        // your results
+        TTF_SetFontStyle(font, TTF_STYLE_BOLD);
+        TTF_SizeText(font, "You", &width_text, NULL);
+        render_text(renderer, font,
+                    unit_to_pix_col_board(NUMBER_COLS + 5) / 4 - width_text / 4,
+                    offset_y + 110, "You");
+        TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
+        CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "Score : %i",
+                                player_1->get_score()));
+        TTF_SizeText(font, text, &width_text, NULL);
+        render_text(renderer, font,
+                    unit_to_pix_col_board(NUMBER_COLS + 5) / 4 - width_text / 4,
+                    offset_y + 160, text);
+        CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "Lines : %i",
+                                player_1->get_line_completed()));
+        TTF_SizeText(font, text, &width_text, NULL);
+        render_text(renderer, font,
+                    unit_to_pix_col_board(NUMBER_COLS + 5) / 4 - width_text / 4,
+                    offset_y + 210, text);
+        if (player_1->get_level() == LEVEL_MAX)
+            CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "Level : max"));
+        else
+            CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "Level : %i",
+                                    player_1->get_level()));
+        TTF_SizeText(font, text, &width_text, NULL);
+        render_text(renderer, font,
+                    unit_to_pix_col_board(NUMBER_COLS + 5) / 4 - width_text / 4,
+                    offset_y + 260, text);
+
+        // enemy results
+        TTF_SetFontStyle(font, TTF_STYLE_BOLD);
+        TTF_SizeText(font, "Ennemy", &width_text, NULL);
+        render_text(renderer, font,
+                    3 * unit_to_pix_col_board(NUMBER_COLS + 5) / 4 - 3 * width_text / 4,
+                    offset_y + 110, "Ennemy");
+        TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
+        CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "Score : %i",
+                                player_2->get_score()));
+        TTF_SizeText(font, text, &width_text, NULL);
+        render_text(renderer, font,
+                    3 * unit_to_pix_col_board(NUMBER_COLS + 5) / 4 - 3 * width_text / 4,
+                    offset_y + 160, text);
+        CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "Lines : %i",
+                                player_2->get_line_completed()));
+        TTF_SizeText(font, text, &width_text, NULL);
+        render_text(renderer, font,
+                    3 * unit_to_pix_col_board(NUMBER_COLS + 5) / 4 - 3 * width_text / 4,
+                    offset_y + 210, text);
+        if (player_2->get_level() == LEVEL_MAX)
+            CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "Level : max"));
+        else
+            CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "Level : %i",
+                                    player_2->get_level()));
+        TTF_SizeText(font, text, &width_text, NULL);
+        render_text(renderer, font,
+                    3 * unit_to_pix_col_board(NUMBER_COLS + 5) / 4 - 3 * width_text / 4,
+                    offset_y + 260, text);
+    }
     TTF_SetFontStyle(font_small, TTF_STYLE_ITALIC);
     TTF_SizeText(font_small, "Press R to play again", &width_text, NULL);
-    render_text(renderer, font_small, 
+    render_text(renderer, font_small,
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
                 offset_y + 380, "Press R to play again");
-    TTF_SizeText(font_small, "Press M to return to the menu", &width_text,NULL);
-    render_text(renderer, font_small, 
+    TTF_SizeText(font_small, "Press M to return to the menu", &width_text, NULL);
+    render_text(renderer, font_small,
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
                 offset_y + 430, "Press M to return to the menu");
     TTF_SetFontStyle(font_small, TTF_STYLE_NORMAL);
@@ -1159,36 +1408,43 @@ void Game::display_board_grid() const
 
     for (int row = 0; row < NUMBER_ROWS + 1; row++)
     {
-        SDL_RenderDrawLine (renderer,
-                            unit_to_pix_col_board(0),
-                            unit_to_pix_row_board(row),
-                            unit_to_pix_col_board(NUMBER_COLS),
-                            unit_to_pix_row_board(row));
+        SDL_RenderDrawLine(renderer,
+                           unit_to_pix_col_board(0),
+                           unit_to_pix_row_board(row),
+                           unit_to_pix_col_board(NUMBER_COLS),
+                           unit_to_pix_row_board(row));
         if (self_status == PLAY_2)
         {
-            SDL_RenderDrawLine (renderer,
-                                window_w + unit_to_pix_col_board(0),
-                                unit_to_pix_row_board(row),
-                                window_w + unit_to_pix_col_board(NUMBER_COLS),
-                                unit_to_pix_row_board(row));
+            SDL_RenderDrawLine(renderer,
+                               window_w + unit_to_pix_col_board(0),
+                               unit_to_pix_row_board(row),
+                               window_w + unit_to_pix_col_board(NUMBER_COLS),
+                               unit_to_pix_row_board(row));
         }
     }
 
     for (int col = 0; col < NUMBER_COLS + 1; col++)
     {
-        SDL_RenderDrawLine (renderer,
-                            unit_to_pix_col_board(col),
-                            unit_to_pix_row_board(0),
-                            unit_to_pix_col_board(col),
-                            unit_to_pix_row_board(NUMBER_ROWS));
+        SDL_RenderDrawLine(renderer,
+                           unit_to_pix_col_board(col),
+                           unit_to_pix_row_board(0),
+                           unit_to_pix_col_board(col),
+                           unit_to_pix_row_board(NUMBER_ROWS));
         if (self_status == PLAY_2)
         {
-            SDL_RenderDrawLine (renderer,
-                                window_w + unit_to_pix_col_board(col),
-                                unit_to_pix_row_board(0),
-                                window_w + unit_to_pix_col_board(col),
-                                unit_to_pix_row_board(NUMBER_ROWS));
+            SDL_RenderDrawLine(renderer,
+                               window_w + unit_to_pix_col_board(col),
+                               unit_to_pix_row_board(0),
+                               window_w + unit_to_pix_col_board(col),
+                               unit_to_pix_row_board(NUMBER_ROWS));
         }
+    }
+
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+
+    if (self_status == PLAY_2)
+    {
+        SDL_RenderDrawLine(renderer, window_w, unit_to_pix_row_board(0), window_w, unit_to_pix_row_board(NUMBER_ROWS));
     }
 }
 
@@ -1198,35 +1454,35 @@ void Game::display_hold_grid() const
 
     for (int row = 0; row <= 6; row++)
     {
-        SDL_RenderDrawLine (renderer,
-                            unit_to_pix_col_hold(0),
-                            unit_to_pix_row_hold(row),
-                            unit_to_pix_col_hold(5),
-                            unit_to_pix_row_hold(row));
+        SDL_RenderDrawLine(renderer,
+                           unit_to_pix_col_hold(0),
+                           unit_to_pix_row_hold(row),
+                           unit_to_pix_col_hold(5),
+                           unit_to_pix_row_hold(row));
         if (self_status == PLAY_2)
         {
-            SDL_RenderDrawLine (renderer,
-                                window_w + unit_to_pix_col_hold(0),
-                                unit_to_pix_row_hold(row),
-                                window_w + unit_to_pix_col_hold(5),
-                                unit_to_pix_row_hold(row));
+            SDL_RenderDrawLine(renderer,
+                               window_w + unit_to_pix_col_hold(0),
+                               unit_to_pix_row_hold(row),
+                               window_w + unit_to_pix_col_hold(5),
+                               unit_to_pix_row_hold(row));
         }
     }
 
     for (int col = 0; col <= 5; col++)
     {
-        SDL_RenderDrawLine (renderer,
-                            unit_to_pix_col_hold(col),
-                            unit_to_pix_row_hold(0),
-                            unit_to_pix_col_hold(col),
-                            unit_to_pix_row_hold(6));
+        SDL_RenderDrawLine(renderer,
+                           unit_to_pix_col_hold(col),
+                           unit_to_pix_row_hold(0),
+                           unit_to_pix_col_hold(col),
+                           unit_to_pix_row_hold(6));
         if (self_status == PLAY_2)
         {
             SDL_RenderDrawLine(renderer,
-                                window_w + unit_to_pix_col_hold(col),
-                                unit_to_pix_row_hold(0),
-                                window_w + unit_to_pix_col_hold(col),
-                                unit_to_pix_row_hold(6));
+                               window_w + unit_to_pix_col_hold(col),
+                               unit_to_pix_row_hold(0),
+                               window_w + unit_to_pix_col_hold(col),
+                               unit_to_pix_row_hold(6));
         }
     }
 }
@@ -1263,35 +1519,35 @@ void Game::display_queue_grid() const
 
     for (int row = 0; row <= 5 * QUEUE_SIZE + 1; row++)
     {
-        SDL_RenderDrawLine (renderer,
-                            unit_to_pix_col_queue(0),
-                            unit_to_pix_row_queue(row),
-                            unit_to_pix_col_queue(4),
-                            unit_to_pix_row_queue(row));
+        SDL_RenderDrawLine(renderer,
+                           unit_to_pix_col_queue(0),
+                           unit_to_pix_row_queue(row),
+                           unit_to_pix_col_queue(4),
+                           unit_to_pix_row_queue(row));
         if (self_status == PLAY_2)
         {
-            SDL_RenderDrawLine (renderer,
-                                window_w + unit_to_pix_col_queue(0),
-                                unit_to_pix_row_queue(row),
-                                window_w + unit_to_pix_col_queue(4),
-                                unit_to_pix_row_queue(row));
+            SDL_RenderDrawLine(renderer,
+                               window_w + unit_to_pix_col_queue(0),
+                               unit_to_pix_row_queue(row),
+                               window_w + unit_to_pix_col_queue(4),
+                               unit_to_pix_row_queue(row));
         }
     }
 
     for (int col = 0; col <= 4; col++)
     {
-        SDL_RenderDrawLine (renderer,
-                            unit_to_pix_col_queue(col),
-                            unit_to_pix_row_queue(0),
-                            unit_to_pix_col_queue(col),
-                            unit_to_pix_row_queue(5 * QUEUE_SIZE + 1));
+        SDL_RenderDrawLine(renderer,
+                           unit_to_pix_col_queue(col),
+                           unit_to_pix_row_queue(0),
+                           unit_to_pix_col_queue(col),
+                           unit_to_pix_row_queue(5 * QUEUE_SIZE + 1));
         if (self_status == PLAY_2)
         {
-            SDL_RenderDrawLine (renderer,
-                                window_w + unit_to_pix_col_queue(col),
-                                unit_to_pix_row_queue(0),
-                                window_w + unit_to_pix_col_queue(col),
-                                unit_to_pix_row_queue(5 * QUEUE_SIZE + 1));
+            SDL_RenderDrawLine(renderer,
+                               window_w + unit_to_pix_col_queue(col),
+                               unit_to_pix_row_queue(0),
+                               window_w + unit_to_pix_col_queue(col),
+                               unit_to_pix_row_queue(5 * QUEUE_SIZE + 1));
         }
     }
 }
@@ -1322,43 +1578,67 @@ void Game::display_queue_background() const
     }
 }
 
-void Game::game_loop (status_t *status, double *delta_t, double *counter_p1,
-    double *counter_p2, double *counter_input_delay_p1,
-    double *counter_input_delay_p2)
+void Game::game_loop(status_t *status, double *delta_t, double *counter_p1,
+                     double *counter_p2, double *counter_input_delay_p1,
+                     double *counter_input_delay_p2)
 {
     // Key management
     while (*status == IN_GAME && SDL_PollEvent(&event))
     {
         switch (event.type)
         {
-        case SDL_QUIT: *status = QUIT; return;
+        case SDL_QUIT:
+            *status = QUIT;
+            return;
         case SDL_KEYDOWN:
             switch (event.key.keysym.sym)
             {
-            case SDLK_ESCAPE: *status = QUIT; return;
-            case SDLK_r: *status = self_status; return;
-            case SDLK_m: *status = MENU; return;
+            case SDLK_ESCAPE:
+                *status = QUIT;
+                return;
+            case SDLK_r:
+                *status = self_status;
+                return;
+            case SDLK_m:
+                *status = MENU;
+                return;
             case SDLK_s:
-                Mix_PausedMusic() ? Mix_ResumeMusic():Mix_PauseMusic(); break;
+                Mix_PausedMusic() ? Mix_ResumeMusic() : Mix_PauseMusic();
+                break;
             }
             break;
-        default: break;
+        default:
+            break;
         }
     }
     // PLAYER 1
     player_1->handle_player_input(difficulty, counter_p1,
-        counter_input_delay_p1);
+                                  counter_input_delay_p1);
 
     // PLAYER 2
     if (self_status == PLAY_2 && player_2 != nullptr)
     {
         player_2->handle_player_input(difficulty, counter_p2,
-            counter_input_delay_p2);
+                                      counter_input_delay_p2);
     }
 
     // Background color (white)
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
+    //send lines
+    if (self_status == PLAY_2 && player_2 != nullptr)
+    {
+        if (player_1->get_send_lines() != 0)
+        {
+            player_2->receive_lines(player_1->get_send_lines());
+            player_1->reset_send_lines();
+        }
+        if (player_2->get_send_lines() != 0)
+        {
+            player_1->receive_lines(player_2->get_send_lines());
+            player_2->reset_send_lines();
+        }
+    }
     // display queue
     player_1->display_board();
     player_1->display_current_tetrimino();
@@ -1367,8 +1647,15 @@ void Game::game_loop (status_t *status, double *delta_t, double *counter_p1,
         player_2->display_board();
         player_2->display_current_tetrimino();
     }
-    
+
     display_board_grid();
+
+    // display projection
+    player_1->display_projection();
+    if (self_status == PLAY_2 && player_2 != nullptr)
+    {
+        player_2->display_projection();
+    }
     // display board
     display_queue_background();
     player_1->display_queue_tetrimino();
@@ -1392,24 +1679,34 @@ void Game::game_loop (status_t *status, double *delta_t, double *counter_p1,
     SDL_RenderPresent(renderer);
 }
 
-void Game::score_screen_loop (status_t *status)
+void Game::score_screen_loop(status_t *status)
 {
     while (*status == IN_GAME && SDL_PollEvent(&event))
     {
         switch (event.type)
         {
-        case SDL_QUIT: *status = QUIT; return;
+        case SDL_QUIT:
+            *status = QUIT;
+            return;
         case SDL_KEYDOWN:
             switch (event.key.keysym.sym)
             {
-            case SDLK_ESCAPE: *status = QUIT; return;
-            case SDLK_r: *status = self_status; return;
-            case SDLK_m: *status = MENU; return;
-            case SDLK_s: 
-                Mix_PausedMusic() ? Mix_ResumeMusic():Mix_PauseMusic(); break;
+            case SDLK_ESCAPE:
+                *status = QUIT;
+                return;
+            case SDLK_r:
+                *status = self_status;
+                return;
+            case SDLK_m:
+                *status = MENU;
+                return;
+            case SDLK_s:
+                Mix_PausedMusic() ? Mix_ResumeMusic() : Mix_PauseMusic();
+                break;
             }
             break;
-        default: break;
+        default:
+            break;
         }
     }
 }
@@ -1433,8 +1730,8 @@ status_t Game::play()
             // update timers and counters
             prev = now;
             now = SDL_GetPerformanceCounter();
-            delta_t = (double)((now - prev) / 
-                (double)SDL_GetPerformanceFrequency());
+            delta_t = (double)((now - prev) /
+                               (double)SDL_GetPerformanceFrequency());
             counter_p1 += delta_t;
             if (self_status == PLAY_2 && player_2 != nullptr)
                 counter_p2 += delta_t;
@@ -1443,7 +1740,7 @@ status_t Game::play()
             // call game loop
 
             game_loop(&status, &delta_t, &counter_p1, &counter_p2,
-                &counter_input_delay_p1, &counter_input_delay_p2);
+                      &counter_input_delay_p1, &counter_input_delay_p2);
 
             // Cap to 60 FPS
             if (difficulty != DIFFICULTY_IMPOSSIBLE)
@@ -1451,7 +1748,7 @@ status_t Game::play()
                 int delay_ms = (int)floor(16.666f - delta_t);
                 if (delay_ms < 100 && delay_ms > 0)
                     SDL_Delay(delay_ms);
-                        SDL_Delay(floor((double)(1000 / 60) - delta_t));
+                SDL_Delay(floor((double)(1000 / 60) - delta_t));
             }
         }
         else
@@ -1470,6 +1767,10 @@ status_t Game::play()
                 winner = 1;
             if (player_1->get_is_game_over())
                 winner = 2;
+            if (player_1->get_level() == LEVEL_MAX)
+                winner = 1;
+            if (player_2->get_level() == LEVEL_MAX)
+                winner = 2;
         }
         else
         {
@@ -1482,8 +1783,8 @@ status_t Game::play()
         // update timers and counters
         prev = now;
         now = SDL_GetPerformanceCounter();
-        delta_t = (double)((now - prev) / 
-            (double)SDL_GetPerformanceFrequency());
+        delta_t = (double)((now - prev) /
+                           (double)SDL_GetPerformanceFrequency());
         score_screen_loop(&status);
         // Cap to 60 FPS
         int delay_ms = (int)floor(16.666f - delta_t);
@@ -1508,6 +1809,7 @@ private:
     TTF_Font *font_small;
     int window_w;
     int window_h;
+
 public:
     Admin();
     ~Admin();
@@ -1516,11 +1818,12 @@ public:
     void menu();
     void help();
     void play_1();
-    void play_2();
+    void menu_play_2();
+    void play_2(int difficulty);
     void play_3();
 };
 
-Admin::~Admin ()
+Admin::~Admin()
 {
     TTF_CloseFont(font);
     TTF_CloseFont(font_small);
@@ -1532,7 +1835,7 @@ Admin::~Admin ()
     SDL_Quit();
 }
 
-void Admin::load_font ()
+void Admin::load_font()
 {
     font = TTF_OpenFont("./src/font/OpenSans-Regular.ttf", 24);
     if (font == NULL)
@@ -1556,8 +1859,7 @@ Admin::Admin() : status(MENU)
         exit(EXIT_FAILURE);
     }
 
-    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, MIX_DEFAULT_CHANNELS, 1024) 
-        == -1) //Initialisation de l'API Mixer
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, MIX_DEFAULT_CHANNELS, 1024) == -1) //Initialisation de l'API Mixer
     {
         fprintf(stderr, "%s", Mix_GetError());
         exit(EXIT_FAILURE);
@@ -1569,7 +1871,7 @@ Admin::Admin() : status(MENU)
     TTF_Init();
 
     // Window
-    window_w = 4 * MARGIN_X + (5 + NUMBER_COLS*2 + 4) * TILE_SIZE_PX;
+    window_w = 4 * MARGIN_X + (5 + NUMBER_COLS * 2 + 4) * TILE_SIZE_PX;
     window_h = NUMBER_ROWS * 2 * TILE_SIZE_PX + MARGIN_Y * 2;
     window = SDL_CreateWindow("Tetris",
                               SDL_WINDOWPOS_UNDEFINED,
@@ -1587,20 +1889,31 @@ void Admin::start()
 {
     Uint64 prev, now = SDL_GetPerformanceCounter(); // timers
     double delta_t;                                 // frame duration in ms
-    
+
     while (status != QUIT)
     {
         prev = now;
         now = SDL_GetPerformanceCounter();
-        delta_t = (double)((now-prev) / (double)SDL_GetPerformanceFrequency());
+        delta_t = (double)((now - prev) / (double)SDL_GetPerformanceFrequency());
         switch (status)
         {
-        case MENU:   menu();   break;
-        case PLAY_1: play_1(); break;
-        case PLAY_2: play_2(); break;
-        case PLAY_3: play_3(); break;
-        case HELP:   help();   break;
-        default: break;
+        case MENU:
+            menu();
+            break;
+        case PLAY_1:
+            play_1();
+            break;
+        case PLAY_2:
+            menu_play_2();
+            break;
+        case PLAY_3:
+            play_3();
+            break;
+        case HELP:
+            help();
+            break;
+        default:
+            break;
         }
         int delay_ms = (int)floor(16.666f - delta_t);
         if (delay_ms < 100 && delay_ms > 0)
@@ -1621,7 +1934,7 @@ void Admin::menu()
     render_text(renderer, font,
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
                 offset_y, "TETRIS : THE GAME");
-    
+
     TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
     TTF_SetFontStyle(font_small, TTF_STYLE_ITALIC);
     TTF_SizeText(font_small, "Press 1 - to play in solo", &width_text, NULL);
@@ -1629,50 +1942,64 @@ void Admin::menu()
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
                 offset_y + 180, "Press 1 - to play in solo");
 
-    TTF_SizeText(font_small, "Press 2 - to play in multiplayer", 
-                &width_text, NULL);
+    TTF_SizeText(font_small, "Press 2 - to play in multiplayer",
+                 &width_text, NULL);
     render_text(renderer, font_small,
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
                 offset_y + 230, "Press 2 - to play in multiplayer");
-    
-    TTF_SizeText(font_small, "Press 3 - AI demo", 
-                &width_text, NULL);
+
+    TTF_SizeText(font_small, "Press 3 - AI demo",
+                 &width_text, NULL);
     render_text(renderer, font_small,
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
                 offset_y + 280, "Press 3 - AI demo");
-    
+
     TTF_SizeText(font_small, "Press H - diplay help", &width_text, NULL);
-    render_text(renderer, font_small, 
+    render_text(renderer, font_small,
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
                 offset_y + 330, "Press H - diplay help");
-    
+
     TTF_SizeText(font_small, "Press Escape to quit", &width_text, NULL);
-    render_text(renderer, font_small, 
+    render_text(renderer, font_small,
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
                 offset_y + 380, "Press Escape to quit");
-    
+
     TTF_SetFontStyle(font_small, TTF_STYLE_NORMAL);
     SDL_RenderPresent(renderer);
     delete[] text;
-    
+
     while (status == MENU && SDL_PollEvent(&event))
     {
         switch (event.type)
         {
-        case SDL_QUIT: status = QUIT; break;
+        case SDL_QUIT:
+            status = QUIT;
+            break;
         case SDL_KEYDOWN:
             switch (event.key.keysym.sym)
             {
-            case SDLK_ESCAPE: status = QUIT; break;
-            case SDLK_1: status = PLAY_1; break;
-            case SDLK_2: status = PLAY_2; break;
-            case SDLK_3: status = PLAY_3; break;
-            case SDLK_h: status = HELP; break;
+            case SDLK_ESCAPE:
+                status = QUIT;
+                break;
+            case SDLK_1:
+                status = PLAY_1;
+                break;
+            case SDLK_2:
+                status = PLAY_2;
+                break;
+            case SDLK_3:
+                status = PLAY_3;
+                break;
+            case SDLK_h:
+                status = HELP;
+                break;
             case SDLK_s:
-                Mix_PausedMusic() ? Mix_ResumeMusic():Mix_PauseMusic(); break;
+                Mix_PausedMusic() ? Mix_ResumeMusic() : Mix_PauseMusic();
+                break;
             }
             break;
-        default: break;
+        default:
+            break;
         }
     }
 }
@@ -1688,32 +2015,31 @@ void Admin::help()
     SDL_RenderClear(renderer);
     TTF_SetFontStyle(font, TTF_STYLE_BOLD);
     TTF_SizeText(font, "HELP : THE CONTROLS", &width_text, NULL);
-    render_text(renderer, font, unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - 
-                width_text / 2, offset_y, "HELP : THE CONTROLS");
+    render_text(renderer, font, unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2, offset_y, "HELP : THE CONTROLS");
     TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
     TTF_SetFontStyle(font_small, TTF_STYLE_ITALIC);
-    render_text(renderer, font_small, offset_x, offset_y + 80, 
+    render_text(renderer, font_small, offset_x, offset_y + 80,
                 "Left arrow : move left");
-    render_text(renderer, font_small, offset_x, offset_y + 115, 
+    render_text(renderer, font_small, offset_x, offset_y + 115,
                 "Right arrow : move right");
-    render_text(renderer, font_small, offset_x, offset_y + 150, 
+    render_text(renderer, font_small, offset_x, offset_y + 150,
                 "Up arrow : rotate clockwise");
-    render_text(renderer, font_small, offset_x, offset_y + 185, 
+    render_text(renderer, font_small, offset_x, offset_y + 185,
                 "Ctrl : rotate counter-clockwise");
-    render_text(renderer, font_small, offset_x, offset_y + 220, 
+    render_text(renderer, font_small, offset_x, offset_y + 220,
                 "Bottom arrow : soft drop");
-    render_text(renderer, font_small, offset_x, offset_y + 255, 
+    render_text(renderer, font_small, offset_x, offset_y + 255,
                 "Spacebar : hard drop");
-    render_text(renderer, font_small, offset_x, offset_y + 290, 
+    render_text(renderer, font_small, offset_x, offset_y + 290,
                 "C : hold piece");
-    render_text(renderer, font_small, offset_x, offset_y + 325, 
+    render_text(renderer, font_small, offset_x, offset_y + 325,
                 "S : to play/stop music");
-    TTF_SizeText(font_small, "Press M to return to the menu", &width_text,NULL);
-    render_text(renderer, font_small, 
+    TTF_SizeText(font_small, "Press M to return to the menu", &width_text, NULL);
+    render_text(renderer, font_small,
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
-                offset_y + 400,"Press M to return to the menu");
+                offset_y + 400, "Press M to return to the menu");
     TTF_SizeText(font_small, "Press Escape to quit", &width_text, NULL);
-    render_text(renderer, font_small, 
+    render_text(renderer, font_small,
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
                 offset_y + 450, "Press Escape to quit");
     TTF_SetFontStyle(font_small, TTF_STYLE_NORMAL);
@@ -1724,17 +2050,25 @@ void Admin::help()
     {
         switch (event.type)
         {
-        case SDL_QUIT: status = QUIT; break;
+        case SDL_QUIT:
+            status = QUIT;
+            break;
         case SDL_KEYDOWN:
             switch (event.key.keysym.sym)
             {
-            case SDLK_ESCAPE: status = QUIT; break;
-            case SDLK_m: status = MENU; break;
+            case SDLK_ESCAPE:
+                status = QUIT;
+                break;
+            case SDLK_m:
+                status = MENU;
+                break;
             case SDLK_s:
-                Mix_PausedMusic() ? Mix_ResumeMusic():Mix_PauseMusic(); break;
+                Mix_PausedMusic() ? Mix_ResumeMusic() : Mix_PauseMusic();
+                break;
             }
             break;
-        default: break;
+        default:
+            break;
         }
     }
 }
@@ -1742,52 +2076,133 @@ void Admin::help()
 void Admin::play_1()
 {
     SDL_SetWindowSize(window, window_w, window_h);
-    Game game = Game (window,
-                      renderer,
-                      font,
-                      font_small,
-                      window_w,
-                      window_h,
-                      status,
-                      DIFFICULTY_IMPOSSIBLE,
-                      new Human_player(renderer, 1, 0));
+    Game game = Game(window,
+                     renderer,
+                     font,
+                     font_small,
+                     window_w,
+                     window_h,
+                     status,
+                     DIFFICULTY_IMPOSSIBLE,
+                     new Human_player(renderer, 1, 0));
     status = game.play();
 }
 
-void Admin::play_2()
+void Admin::menu_play_2()
+{
+    int offset_y = 80;
+    char *text = new char[BUFF_SIZE];
+    int width_text;
+
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_RenderClear(renderer);
+    TTF_SetFontStyle(font, TTF_STYLE_BOLD);
+    TTF_SizeText(font, "CHOOSE THE LEVEL OF THE AI", &width_text, NULL);
+    render_text(renderer, font,
+                unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
+                offset_y, "CHOOSE THE LEVEL OF THE AI");
+
+    TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
+    TTF_SetFontStyle(font_small, TTF_STYLE_ITALIC);
+    TTF_SizeText(font_small, "Press 1 - Easy", &width_text, NULL);
+    render_text(renderer, font_small,
+                unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
+                offset_y + 180, "Press 1 - Easy");
+
+    TTF_SizeText(font_small, "Press 2 - Normal",
+                 &width_text, NULL);
+    render_text(renderer, font_small,
+                unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
+                offset_y + 230, "Press 2 - Normal");
+
+    TTF_SizeText(font_small, "Press 3 - Hard",
+                 &width_text, NULL);
+    render_text(renderer, font_small,
+                unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
+                offset_y + 280, "Press 3 - Hard");
+
+    TTF_SizeText(font_small, "Press 4 - Impossible", &width_text, NULL);
+    render_text(renderer, font_small,
+                unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
+                offset_y + 330, "Press 4 - Impossible");
+
+    TTF_SetFontStyle(font_small, TTF_STYLE_NORMAL);
+    SDL_RenderPresent(renderer);
+    delete[] text;
+
+    while (status == PLAY_2 && SDL_PollEvent(&event))
+    {
+        switch (event.type)
+        {
+        case SDL_QUIT:
+            status = QUIT;
+            break;
+        case SDL_KEYDOWN:
+            switch (event.key.keysym.sym)
+            {
+            case SDLK_ESCAPE:
+                status = QUIT;
+                break;
+            case SDLK_1:
+                play_2(DIFFICULTY_EASY);
+                break;
+            case SDLK_2:
+                play_2(DIFFICULTY_NORMAL);
+                break;
+            case SDLK_3:
+                play_2(DIFFICULTY_HARD);
+                break;
+            case SDLK_4:
+                play_2(DIFFICULTY_IMPOSSIBLE);
+                break;
+            case SDLK_m:
+                status = MENU;
+                break;
+            case SDLK_s:
+                Mix_PausedMusic() ? Mix_ResumeMusic() : Mix_PauseMusic();
+                break;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+void Admin::play_2(int difficutly)
 {
     SDL_SetWindowSize(window, window_w * 2, window_h);
-    Game game = Game (window,
-                      renderer,
-                      font,
-                      font_small,
-                      window_w,
-                      window_h,
-                      status,
-                      DIFFICULTY_NORMAL, // adjust difficulty here (AI)
-                      new Human_player(renderer, 1, 0),
-                      new AI_player(renderer, 2, window_w));
+    Game game = Game(window,
+                     renderer,
+                     font,
+                     font_small,
+                     window_w,
+                     window_h,
+                     status,
+                     difficutly, // adjust difficulty here (AI)
+                     new Human_player(renderer, 1, 0),
+                     new AI_player(renderer, 2, window_w));
     status = game.play();
 }
 
 void Admin::play_3()
 {
     SDL_SetWindowSize(window, window_w, window_h);
-    Game game = Game (window,
-                      renderer,
-                      font,
-                      font_small,
-                      window_w,
-                      window_h,
-                      status,
-                      DIFFICULTY_IMPOSSIBLE,
-                      new AI_player(renderer, 1, 0));
+    Game game = Game(window,
+                     renderer,
+                     font,
+                     font_small,
+                     window_w,
+                     window_h,
+                     status,
+                     DIFFICULTY_IMPOSSIBLE,
+                     new AI_player(renderer, 1, 0));
     status = game.play();
 }
 
 int main(int argc, char **argv)
 {
-    srand (time(NULL));
+    srand(time(NULL));
     // srand(1); // DEBUG
 
     Admin admin;
