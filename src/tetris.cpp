@@ -95,7 +95,8 @@ public:
 
 Human_player::Human_player(SDL_Renderer *renderer_,
                            int player_number_,
-                           int offset_x_) : Player(renderer_, player_number_, offset_x_) {}
+                           int offset_x_) :
+    Player(renderer_, player_number_, offset_x_) {}
 
 void Human_player::handle_player_input(double difficulty,
                                        double *counter,
@@ -142,7 +143,8 @@ void Human_player::display_projection()
             }
         }
     }
-
+    int pos_ref[4][2];
+    current_tetrimino->get_position(&pos_ref);
     for (int i = 0; i < 4; i++)
     {
         if (pos[i][1] >= 0)
@@ -150,10 +152,33 @@ void Human_player::display_projection()
             std::vector<int> color = current_tetrimino->get_color();
             SDL_SetRenderDrawColor(
                 renderer, color[0], color[1], color[2], 255);
-            SDL_RenderDrawLine(renderer, offset_x + unit_to_pix_col_board(pos[i][0]), unit_to_pix_row_board(pos[i][1]), offset_x + unit_to_pix_col_board(pos[i][0]) + TILE_SIZE_PX * 2, unit_to_pix_row_board(pos[i][1]));
-            SDL_RenderDrawLine(renderer, offset_x + unit_to_pix_col_board(pos[i][0]), unit_to_pix_row_board(pos[i][1]), offset_x + unit_to_pix_col_board(pos[i][0]), unit_to_pix_row_board(pos[i][1]) + TILE_SIZE_PX * 2);
-            SDL_RenderDrawLine(renderer, offset_x + unit_to_pix_col_board(pos[i][0]) + TILE_SIZE_PX * 2, unit_to_pix_row_board(pos[i][1]), offset_x + unit_to_pix_col_board(pos[i][0]) + TILE_SIZE_PX * 2, unit_to_pix_row_board(pos[i][1]) + TILE_SIZE_PX * 2);
-            SDL_RenderDrawLine(renderer, offset_x + unit_to_pix_col_board(pos[i][0]), unit_to_pix_row_board(pos[i][1]) + TILE_SIZE_PX * 2, offset_x + unit_to_pix_col_board(pos[i][0]) + TILE_SIZE_PX * 2, unit_to_pix_row_board(pos[i][1]) + TILE_SIZE_PX * 2);
+            for (int j = 0; j < 4; j++)
+                if (pos[i][0] == pos_ref[j][0] && pos[i][1] == pos_ref[j][1])
+                {
+                    SDL_SetRenderDrawColor(renderer, 30, 30, 30, 255);
+                    break;
+                }
+            
+            SDL_RenderDrawLine(renderer, 
+                offset_x + unit_to_pix_col_board(pos[i][0]),
+                unit_to_pix_row_board(pos[i][1]), 
+                offset_x + unit_to_pix_col_board(pos[i][0]) + TILE_SIZE_PX * 2,
+                unit_to_pix_row_board(pos[i][1]));
+            SDL_RenderDrawLine(renderer, 
+                offset_x + unit_to_pix_col_board(pos[i][0]),
+                unit_to_pix_row_board(pos[i][1]),
+                offset_x + unit_to_pix_col_board(pos[i][0]),
+                unit_to_pix_row_board(pos[i][1]) + TILE_SIZE_PX * 2);
+            SDL_RenderDrawLine(renderer,
+                offset_x + unit_to_pix_col_board(pos[i][0]) + TILE_SIZE_PX * 2,
+                unit_to_pix_row_board(pos[i][1]),
+                offset_x + unit_to_pix_col_board(pos[i][0]) + TILE_SIZE_PX * 2,
+                unit_to_pix_row_board(pos[i][1]) + TILE_SIZE_PX * 2);
+            SDL_RenderDrawLine(renderer,
+                offset_x + unit_to_pix_col_board(pos[i][0]),
+                unit_to_pix_row_board(pos[i][1]) + TILE_SIZE_PX * 2,
+                offset_x + unit_to_pix_col_board(pos[i][0]) + TILE_SIZE_PX * 2,
+                unit_to_pix_row_board(pos[i][1]) + TILE_SIZE_PX * 2);
         }
     }
 }
@@ -177,10 +202,13 @@ void Human_player::display_player_info(TTF_Font *font)
     render_text(renderer, font, offset_x + MARGIN_X, 150, "Press C");
     render_text(renderer, font, offset_x + MARGIN_X, 180, "to hold");
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderDrawLine(renderer, offset_x + MARGIN_X, offset_y + 255, offset_x + unit_to_pix_col_board(0) - MARGIN_X, offset_y + 255);
+    SDL_RenderDrawLine(renderer, offset_x + MARGIN_X, offset_y + 255,
+        offset_x + unit_to_pix_col_board(0) - MARGIN_X, offset_y + 255);
     int width_text;
     TTF_SizeText(font, "You", &width_text, NULL);
-    render_text(renderer, font, offset_x + unit_to_pix_col_board(0) / 2 - width_text / 2, offset_y + 270, "You");
+    render_text(renderer, font, 
+        offset_x + unit_to_pix_col_board(0) / 2 - width_text / 2,
+        offset_y + 270, "You");
     delete[] text;
 }
 
@@ -234,7 +262,8 @@ public:
 
 AI_player::AI_player(SDL_Renderer *renderer_,
                      int player_number_,
-                     int offset_x_) : Player(renderer_, player_number_, offset_x_) {}
+                     int offset_x_) : 
+    Player(renderer_, player_number_, offset_x_) {}
 
 void AI_player::handle_player_input(double difficulty,
                                     double *counter,
@@ -260,7 +289,8 @@ void AI_player::handle_player_input(double difficulty,
     }
     // computed inputs are played and respect the minimum delay between
     // inputs (AI can't play too fast) -> adjusted with difficulty
-    if (*counter_input_delay > KEY_INPUT_COUNTER * difficulty && !get_input_queue().empty())
+    if (*counter_input_delay > KEY_INPUT_COUNTER * difficulty &&
+        !get_input_queue().empty())
     {
         *counter_input_delay = 0;
         input_t input = pop_input_queue();
@@ -296,23 +326,26 @@ void AI_player::display_player_info(TTF_Font *font)
         CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "%i", level));
     render_text(renderer, font, offset_x + MARGIN_X, offset_y + 200, text);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderDrawLine(renderer, offset_x + MARGIN_X, offset_y + 255, offset_x + unit_to_pix_col_board(0) - MARGIN_X, offset_y + 255);
+    SDL_RenderDrawLine(renderer, offset_x + MARGIN_X, offset_y + 255, 
+        offset_x + unit_to_pix_col_board(0) - MARGIN_X, offset_y + 255);
     int width_text;
     TTF_SizeText(font, "AI", &width_text, NULL);
-    render_text(renderer, font, offset_x + unit_to_pix_col_board(0) / 2 - width_text / 2, offset_y + 270, "AI");
+    render_text(renderer, font, offset_x + unit_to_pix_col_board(0) / 2 
+        - width_text / 2, offset_y + 270, "AI");
     delete[] text;
 }
 
-Player::Player(SDL_Renderer *renderer_, int player_number_, int offset_x_) : renderer(renderer_),
-                                                                             player_number(player_number_),
-                                                                             offset_x(offset_x_),
-                                                                             current_tetrimino(nullptr),
-                                                                             speed(DEFAULT_GAME_SPEED),
-                                                                             line_completed(0),
-                                                                             level(1),
-                                                                             score(0),
-                                                                             hold(nullptr),
-                                                                             send_lines(0)
+Player::Player(SDL_Renderer *renderer_, int player_number_, int offset_x_) : 
+    renderer(renderer_),
+    player_number(player_number_),
+    offset_x(offset_x_),
+    current_tetrimino(nullptr),
+    speed(DEFAULT_GAME_SPEED),
+    line_completed(0),
+    level(1),
+    score(0),
+    hold(nullptr),
+    send_lines(0)
 {
     for (int i = 0; i < NUMBER_COLS; i++)
         for (int j = 0; j < NUMBER_ROWS; j++)
@@ -886,6 +919,19 @@ void Player::receive_lines(int nb_lines)
 {
     for (int i = 0; i < nb_lines; i++)
     {
+        int pos[4][2];
+        current_tetrimino->get_position(&pos);
+        bool skip = false;
+        for (int row = 1; row < NUMBER_ROWS; row++)
+            for (int col = 0; col < NUMBER_COLS; col++)
+                for (int j = 0; j < 4; j++)
+                    if (pos[j][0] == col && pos[j][1] == row-1 &&
+                        board[col][row] != tile_empty)
+                            skip = true;
+        
+        if (skip)
+            continue;
+        
         for (int row = 1; row < NUMBER_ROWS; row++)
         {
             for (int col = 0; col < NUMBER_COLS; col++)
@@ -900,7 +946,7 @@ void Player::receive_lines(int nb_lines)
         int hole = rand() % NUMBER_COLS;
         for (int col = 0; col < NUMBER_COLS; col++)
         {
-            if (col != hole)
+            if (col != hole && board[col][NUMBER_ROWS - 1] == tile_empty)
                 board[col][NUMBER_ROWS - 1] = title_add_line;
         }
     }
@@ -1034,7 +1080,10 @@ double AI_player::evaluate_board(
         spikyness += abs(height_board[i] - height_board[i + 1]);
     }
 
-    return 2 * max_height + 1.5 * nb_holes + 0.5 * spikyness - 4 * nb_completed_lines;
+    return 2 * max_height
+           + 1.5 * nb_holes
+           + 0.5 * spikyness
+           - 4 * nb_completed_lines;
 }
 
 void AI_player::compute_scores(
@@ -1272,11 +1321,6 @@ void Game::display_fps(double fps) const
 
 void Game::display_results(int winner) const
 {
-    // TODO use winner to change the display
-    // 0 -> solo play -> game over
-    // 1 -> multi -> player 1 win -> both score diplayed
-    // 2 -> multi -> player 2 win -> both score diplayed
-
     int offset_y = 80;
     char *text = new char[BUFF_SIZE];
     int width_text;
@@ -1316,19 +1360,21 @@ void Game::display_results(int winner) const
         if (winner == 1)
         {
             TTF_SetFontStyle(font, TTF_STYLE_BOLD);
-            TTF_SizeText(font, "YOU ARE THE WINNER!", &width_text, NULL);
+            TTF_SizeText(font, "YOU WIN !", &width_text, NULL);
             render_text(renderer, font,
-                        unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
-                        offset_y, "YOU ARE THE WINNER!");
+                        unit_to_pix_col_board(NUMBER_COLS + 5) / 2 
+                        - width_text / 2,
+                        offset_y, "YOU WIN !");
             TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
         }
         else
         {
             TTF_SetFontStyle(font, TTF_STYLE_BOLD);
-            TTF_SizeText(font, "YOUR ENNEMY IS THE WINNER!", &width_text, NULL);
+            TTF_SizeText(font, "YOU LOSE !", &width_text, NULL);
             render_text(renderer, font,
-                        unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
-                        offset_y, "YOUR ENNEMY IS THE WINNER!");
+                        unit_to_pix_col_board(NUMBER_COLS + 5) / 2 
+                        - width_text / 2,
+                        offset_y, "YOU LOSE !");
             TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
         }
         // your results
@@ -1364,20 +1410,23 @@ void Game::display_results(int winner) const
         TTF_SetFontStyle(font, TTF_STYLE_BOLD);
         TTF_SizeText(font, "Ennemy", &width_text, NULL);
         render_text(renderer, font,
-                    3 * unit_to_pix_col_board(NUMBER_COLS + 5) / 4 - 3 * width_text / 4,
+                    3 * unit_to_pix_col_board(NUMBER_COLS + 5) / 4 
+                    - 3 * width_text / 4,
                     offset_y + 110, "Ennemy");
         TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
         CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "Score : %i",
                                 player_2->get_score()));
         TTF_SizeText(font, text, &width_text, NULL);
         render_text(renderer, font,
-                    3 * unit_to_pix_col_board(NUMBER_COLS + 5) / 4 - 3 * width_text / 4,
+                    3 * unit_to_pix_col_board(NUMBER_COLS + 5) / 4 
+                    - 3 * width_text / 4,
                     offset_y + 160, text);
         CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "Lines : %i",
                                 player_2->get_line_completed()));
         TTF_SizeText(font, text, &width_text, NULL);
         render_text(renderer, font,
-                    3 * unit_to_pix_col_board(NUMBER_COLS + 5) / 4 - 3 * width_text / 4,
+                    3 * unit_to_pix_col_board(NUMBER_COLS + 5) / 4 
+                    - 3 * width_text / 4,
                     offset_y + 210, text);
         if (player_2->get_level() == LEVEL_MAX)
             CHECK_SNPRINFT(snprintf(text, BUFF_SIZE, "Level : max"));
@@ -1386,18 +1435,20 @@ void Game::display_results(int winner) const
                                     player_2->get_level()));
         TTF_SizeText(font, text, &width_text, NULL);
         render_text(renderer, font,
-                    3 * unit_to_pix_col_board(NUMBER_COLS + 5) / 4 - 3 * width_text / 4,
+                    3 * unit_to_pix_col_board(NUMBER_COLS + 5) / 4 
+                    - 3 * width_text / 4,
                     offset_y + 260, text);
     }
-    TTF_SetFontStyle(font_small, TTF_STYLE_ITALIC);
-    TTF_SizeText(font_small, "Press R to play again", &width_text, NULL);
+    TTF_SetFontStyle(font_small, TTF_STYLE_NORMAL);
+    // TTF_SetFontStyle(font_small, TTF_STYLE_ITALIC);
+    TTF_SizeText(font_small, "Press R - play again", &width_text, NULL);
     render_text(renderer, font_small,
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
-                offset_y + 380, "Press R to play again");
-    TTF_SizeText(font_small, "Press M to return to the menu", &width_text, NULL);
+                offset_y + 380, "Press R - play again");
+    TTF_SizeText(font_small, "Press M - return to menu", &width_text,NULL);
     render_text(renderer, font_small,
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
-                offset_y + 430, "Press M to return to the menu");
+                offset_y + 430, "Press M - return to menu");
     TTF_SetFontStyle(font_small, TTF_STYLE_NORMAL);
     delete[] text;
 }
@@ -1444,7 +1495,8 @@ void Game::display_board_grid() const
 
     if (self_status == PLAY_2)
     {
-        SDL_RenderDrawLine(renderer, window_w, unit_to_pix_row_board(0), window_w, unit_to_pix_row_board(NUMBER_ROWS));
+        SDL_RenderDrawLine(renderer, window_w, unit_to_pix_row_board(0), 
+            window_w, unit_to_pix_row_board(NUMBER_ROWS));
     }
 }
 
@@ -1611,20 +1663,7 @@ void Game::game_loop(status_t *status, double *delta_t, double *counter_p1,
             break;
         }
     }
-    // PLAYER 1
-    player_1->handle_player_input(difficulty, counter_p1,
-                                  counter_input_delay_p1);
 
-    // PLAYER 2
-    if (self_status == PLAY_2 && player_2 != nullptr)
-    {
-        player_2->handle_player_input(difficulty, counter_p2,
-                                      counter_input_delay_p2);
-    }
-
-    // Background color (white)
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    SDL_RenderClear(renderer);
     //send lines
     if (self_status == PLAY_2 && player_2 != nullptr)
     {
@@ -1639,6 +1678,22 @@ void Game::game_loop(status_t *status, double *delta_t, double *counter_p1,
             player_2->reset_send_lines();
         }
     }
+
+    // PLAYER 1
+    player_1->handle_player_input(difficulty, counter_p1,
+                                  counter_input_delay_p1);
+
+    // PLAYER 2
+    if (self_status == PLAY_2 && player_2 != nullptr)
+    {
+        player_2->handle_player_input(difficulty, counter_p2,
+                                      counter_input_delay_p2);
+    }
+
+    // Background color (white)
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_RenderClear(renderer);
+    
     // display queue
     player_1->display_board();
     player_1->display_current_tetrimino();
@@ -1748,7 +1803,6 @@ status_t Game::play()
                 int delay_ms = (int)floor(16.666f - delta_t);
                 if (delay_ms < 100 && delay_ms > 0)
                     SDL_Delay(delay_ms);
-                SDL_Delay(floor((double)(1000 / 60) - delta_t));
             }
         }
         else
@@ -1859,7 +1913,8 @@ Admin::Admin() : status(MENU)
         exit(EXIT_FAILURE);
     }
 
-    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, MIX_DEFAULT_CHANNELS, 1024) == -1) //Initialisation de l'API Mixer
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, MIX_DEFAULT_CHANNELS, 1024) 
+        == -1) //Initialisation de l'API Mixer
     {
         fprintf(stderr, "%s", Mix_GetError());
         exit(EXIT_FAILURE);
@@ -1894,7 +1949,7 @@ void Admin::start()
     {
         prev = now;
         now = SDL_GetPerformanceCounter();
-        delta_t = (double)((now - prev) / (double)SDL_GetPerformanceFrequency());
+        delta_t = (double)((now-prev) / (double)SDL_GetPerformanceFrequency());
         switch (status)
         {
         case MENU:
@@ -1936,7 +1991,7 @@ void Admin::menu()
                 offset_y, "TETRIS : THE GAME");
 
     TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
-    TTF_SetFontStyle(font_small, TTF_STYLE_ITALIC);
+    // TTF_SetFontStyle(font_small, TTF_STYLE_ITALIC);
     TTF_SizeText(font_small, "Press 1 - to play in solo", &width_text, NULL);
     render_text(renderer, font_small,
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
@@ -1954,15 +2009,15 @@ void Admin::menu()
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
                 offset_y + 280, "Press 3 - AI demo");
 
-    TTF_SizeText(font_small, "Press H - diplay help", &width_text, NULL);
+    TTF_SizeText(font_small, "Press H - display help", &width_text, NULL);
     render_text(renderer, font_small,
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
-                offset_y + 330, "Press H - diplay help");
+                offset_y + 330, "Press H - display help");
 
-    TTF_SizeText(font_small, "Press Escape to quit", &width_text, NULL);
+    TTF_SizeText(font_small, "Press Escape - quit", &width_text, NULL);
     render_text(renderer, font_small,
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
-                offset_y + 380, "Press Escape to quit");
+                offset_y + 380, "Press Escape - quit");
 
     TTF_SetFontStyle(font_small, TTF_STYLE_NORMAL);
     SDL_RenderPresent(renderer);
@@ -2014,10 +2069,12 @@ void Admin::help()
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
     TTF_SetFontStyle(font, TTF_STYLE_BOLD);
-    TTF_SizeText(font, "HELP : THE CONTROLS", &width_text, NULL);
-    render_text(renderer, font, unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2, offset_y, "HELP : THE CONTROLS");
+    TTF_SizeText(font, "HELP : CONTROLS", &width_text, NULL);
+    render_text(renderer, font, 
+        unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2, 
+        offset_y, "HELP : CONTROLS");
     TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
-    TTF_SetFontStyle(font_small, TTF_STYLE_ITALIC);
+    // TTF_SetFontStyle(font_small, TTF_STYLE_ITALIC);
     render_text(renderer, font_small, offset_x, offset_y + 80,
                 "Left arrow : move left");
     render_text(renderer, font_small, offset_x, offset_y + 115,
@@ -2033,15 +2090,16 @@ void Admin::help()
     render_text(renderer, font_small, offset_x, offset_y + 290,
                 "C : hold piece");
     render_text(renderer, font_small, offset_x, offset_y + 325,
-                "S : to play/stop music");
-    TTF_SizeText(font_small, "Press M to return to the menu", &width_text, NULL);
+                "S : play/stop music");
+    TTF_SizeText(font_small, "Press M - return to menu", 
+        &width_text, NULL);
     render_text(renderer, font_small,
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
-                offset_y + 400, "Press M to return to the menu");
-    TTF_SizeText(font_small, "Press Escape to quit", &width_text, NULL);
+                offset_y + 400, "Press M - return to menu");
+    TTF_SizeText(font_small, "Press Escape - quit", &width_text, NULL);
     render_text(renderer, font_small,
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
-                offset_y + 450, "Press Escape to quit");
+                offset_y + 450, "Press Escape - quit");
     TTF_SetFontStyle(font_small, TTF_STYLE_NORMAL);
     SDL_RenderPresent(renderer);
     delete[] text;
@@ -2083,7 +2141,7 @@ void Admin::play_1()
                      window_w,
                      window_h,
                      status,
-                     DIFFICULTY_IMPOSSIBLE,
+                     DIFFICULTY_EASY,
                      new Human_player(renderer, 1, 0));
     status = game.play();
 }
@@ -2097,13 +2155,13 @@ void Admin::menu_play_2()
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
     TTF_SetFontStyle(font, TTF_STYLE_BOLD);
-    TTF_SizeText(font, "CHOOSE THE LEVEL OF THE AI", &width_text, NULL);
+    TTF_SizeText(font, "CHOOSE AI DIFFICULTY", &width_text, NULL);
     render_text(renderer, font,
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
-                offset_y, "CHOOSE THE LEVEL OF THE AI");
+                offset_y, "CHOOSE AI DIFFICULTY");
 
     TTF_SetFontStyle(font, TTF_STYLE_NORMAL);
-    TTF_SetFontStyle(font_small, TTF_STYLE_ITALIC);
+    // TTF_SetFontStyle(font_small, TTF_STYLE_ITALIC);
     TTF_SizeText(font_small, "Press 1 - Easy", &width_text, NULL);
     render_text(renderer, font_small,
                 unit_to_pix_col_board(NUMBER_COLS + 5) / 2 - width_text / 2,
@@ -2213,18 +2271,9 @@ int main(int argc, char **argv)
 
 // TODO list
 /*
- - tetrimino probability apparition
- - difficulty menu for multiplayer 
-        -> play_2() call of contructor change difficulty
-        4 constants can be used
-        DIFFICULTY_EASY
-        DIFFICULTY_NORMAL
-        DIFFICULTY_HARD
-        DIFFICULTY_IMPOSSIBLE
+ - (tetrimino probability apparition)
  - music volume decrease at the end
- - display result function
- - function to add line to opponent board in multiplayer
- - multiplayer mode online (with 2 humans)
+ - (multiplayer mode online (with 2 humans) )
  - valgrind memory leaks (check destructors)
  - split files by classes
  ----------------------
