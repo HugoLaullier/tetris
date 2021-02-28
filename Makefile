@@ -7,10 +7,19 @@ HEADERS=src/headers
 
 all: $(EXEC)
 
-tetris: tetris.o utils.o positionInSpace.o tetrimino.o
+tetris: tetris.o utils.o positionInSpace.o tetrimino.o player.o game.o admin.o
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-tetris.o: $(SRC)/tetris.cpp $(HEADERS)/utils.hpp $(HEADERS)/positionInSpace.hpp $(HEADERS)/tetrimino.hpp $(HEADERS)/constants.hpp 
+tetris.o: $(SRC)/tetris.cpp $(HEADERS)/utils.hpp $(HEADERS)/positionInSpace.hpp $(HEADERS)/tetrimino.hpp $(HEADERS)/constants.hpp $(HEADERS)/game.hpp $(HEADERS)/player.hpp $(HEADERS)/admin.hpp
+	$(CC) -o $@ -c $< $(CFLAGS)
+
+player.o: $(SRC)/player.cpp $(HEADERS)/player.hpp
+	$(CC) -o $@ -c $< $(CFLAGS)
+
+game.o: $(SRC)/game.cpp $(HEADERS)/game.hpp
+	$(CC) -o $@ -c $< $(CFLAGS)
+
+admin.o: $(SRC)/admin.cpp $(HEADERS)/admin.hpp
 	$(CC) -o $@ -c $< $(CFLAGS)
 
 utils.o: $(SRC)/utils.cpp $(HEADERS)/utils.hpp

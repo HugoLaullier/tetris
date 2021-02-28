@@ -8,11 +8,7 @@
 #ifndef _UTILS_HPP_
 #define _UTILS_HPP_
 //------------------------------
-#include <vector>
-#include <iostream>
-#include <stdarg.h>
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
+
 #include "constants.hpp"
 
 /*!
@@ -44,8 +40,6 @@ int unit_to_pix_row_hold(int unit);
 bool is_in_board(int x, int y);
 
 std::vector<int> get_color_from_tile_name(tile_name_t tile);
-
-#define BUFF_SIZE 1024
 
 #define CHECK_SNPRINFT(n) do {if(n<0||n>=BUFF_SIZE)handle_perror(#n);}while(0)
 

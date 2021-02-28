@@ -9,6 +9,21 @@
 #define _CONSTANTS_HPP_
 //------------------------------
 
+// includes
+
+#include <vector>
+#include <stdarg.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
+#include "SDL2/SDL_mixer.h"
+#include <algorithm>
+#include <utility>
+#include <stdlib.h>
+#include <time.h>
+#include <iostream>
+#include <sstream>
+#include <climits>
+
 // Freq : 60Hz
 
 /** 
@@ -54,5 +69,7 @@ enum input_t {INPUT_RIGHT, INPUT_LEFT, INPUT_UP, INPUT_DOWN, INPUT_CTRL,
 #define DIFFICULTY_IMPOSSIBLE 0
 
 #define COMPUTE_FPS true
+
+#define BUFF_SIZE 1024
 
 #endif

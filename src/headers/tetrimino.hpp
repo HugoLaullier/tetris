@@ -11,7 +11,7 @@
 #include "positionInSpace.hpp"
 #include "constants.hpp"
 #include "utils.hpp"
-#include <vector>
+
 //------------------------------
 
 /**

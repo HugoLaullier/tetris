@@ -8,7 +8,8 @@
 #ifndef _POSITION_IN_SPACE_HPP_
 #define _POSITION_IN_SPACE_HPP_
 
-#include <vector>
+#include "constants.hpp"
+
 //------------------------------
 
 /**
