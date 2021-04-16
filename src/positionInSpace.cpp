@@ -1,4 +1,4 @@
-#include "headers/positionInSpace.hpp"
+#include "../include/positionInSpace.hpp"
 
 PositionInSpace::PositionInSpace(){};
 

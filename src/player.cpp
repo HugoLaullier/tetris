@@ -1,4 +1,4 @@
-#include "headers/player.hpp"
+#include "../include/player.hpp"
 
 /*-------------------------------------------------------------------*/
 
@@ -248,6 +248,16 @@ Player::Player(SDL_Renderer *renderer_, int player_number_, int offset_x_) :
     current_tetrimino = queue_tetrimino[0];
 }
 
+Player::~Player()
+{
+    for (int i = 0; i < NB_TETRIMONO; i++)
+    {
+        queue_tetrimino.pop_back();
+    }
+    if (hold != nullptr)
+        delete hold;
+}
+
 int Player::get_player_number() const
 {
     return player_number;
@@ -420,7 +430,6 @@ void Player::new_tetrimino()
     current_tetrimino = queue_tetrimino[0];
     queue_tetrimino.pop_back();
     int r = rand() % 7;
-    //int r = 0;
     switch (r)
     {
     case 0:
@@ -543,6 +552,7 @@ void Player::new_hold()
         else
         {
             Tetrimino *temp_copy = new Tetrimino(*current_tetrimino);
+            //delete current_tetrimino;
             current_tetrimino = hold;
             hold = temp_copy;
             hold->reset_pos();
@@ -616,7 +626,8 @@ bool Player::move_left()
         }
         else
         {
-            if (board[pos[i][0] - 1][pos[i][1]] != tile_empty ||
+            if (!is_in_board(pos[i][0] - 1, pos[i][1]) ||
+                board[pos[i][0] - 1][pos[i][1]] != tile_empty ||
                 pos[i][0] - 1 < 0)
             {
                 return false; // movement is blocked
@@ -642,7 +653,8 @@ bool Player::move_right()
         }
         else
         {
-            if (board[pos[i][0] + 1][pos[i][1]] != tile_empty ||
+            if (!is_in_board(pos[i][0] + 1, pos[i][1]) ||
+                board[pos[i][0] + 1][pos[i][1]] != tile_empty ||
                 pos[i][0] + 1 >= NUMBER_COLS)
             {
                 return false; // movement is blocked

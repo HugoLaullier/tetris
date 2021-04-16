@@ -1,5 +1,4 @@
-#include "headers/game.hpp"
-
+#include "../include/game.hpp"
 
 Game::Game(SDL_Window *window, SDL_Renderer *renderer,
            TTF_Font *font, TTF_Font *font_small,
@@ -28,6 +27,14 @@ Game::Game(SDL_Window *window, SDL_Renderer *renderer,
                                      difficulty(difficulty),
                                      player_1(p1),
                                      player_2(p2) {}
+
+Game::~Game()
+{
+    if (player_1 != nullptr)
+        delete player_1;
+    if (player_2 != nullptr)
+        delete player_2;
+}
 
 void Game::display_fps(double fps) const
 {

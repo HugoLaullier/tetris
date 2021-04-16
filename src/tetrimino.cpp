@@ -1,4 +1,4 @@
-#include "headers/tetrimino.hpp"
+#include "../include/tetrimino.hpp"
 
 Tetrimino::Tetrimino () {}
 
@@ -77,16 +77,6 @@ int Tetrimino::get_orientation() const
     return orientation;
 }
 
-void Tetrimino::set_x(int x_)
-{
-    x = x_;
-}
-
-void Tetrimino::set_y(int y_)
-{
-    y = y_;
-}
-
 int Tetrimino::get_preview_x() const
 {
     return preview_x;
@@ -100,6 +90,16 @@ int Tetrimino::get_preview_y() const
 int Tetrimino::get_preview_orientation() const
 {
     return preview_orientation;
+}
+
+void Tetrimino::set_x(int x_)
+{
+    x = x_;
+}
+
+void Tetrimino::set_y(int y_)
+{
+    y = y_;
 }
 
 void Tetrimino::move_down()

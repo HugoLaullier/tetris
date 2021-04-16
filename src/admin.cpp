@@ -1,4 +1,4 @@
-#include "headers/admin.hpp"
+#include "../include/admin.hpp"
 
 Admin::~Admin()
 {
@@ -14,13 +14,13 @@ Admin::~Admin()
 
 void Admin::load_font()
 {
-    font = TTF_OpenFont("./src/font/OpenSans-Regular.ttf", 24);
+    font = TTF_OpenFont("./font/OpenSans-Regular.ttf", 24);
     if (font == NULL)
     {
         fprintf(stderr, "error: font not found\n");
         exit(EXIT_FAILURE);
     }
-    font_small = TTF_OpenFont("./src/font/OpenSans-Regular.ttf", 19);
+    font_small = TTF_OpenFont("./font/OpenSans-Regular.ttf", 19);
     if (font_small == NULL)
     {
         fprintf(stderr, "error: font not found\n");
@@ -257,7 +257,7 @@ void Admin::help()
 void Admin::play_1()
 {
     SDL_SetWindowSize(window, window_w, window_h);
-    Game game = Game(window,
+    Game *game = new Game(window,
                      renderer,
                      font,
                      font_small,
@@ -266,7 +266,8 @@ void Admin::play_1()
                      status,
                      DIFFICULTY_EASY,
                      new Human_player(renderer, 1, 0));
-    status = game.play();
+    status = game->play();
+    delete game;
 }
 
 void Admin::menu_play_2()
@@ -353,7 +354,7 @@ void Admin::menu_play_2()
 void Admin::play_2(int difficutly)
 {
     SDL_SetWindowSize(window, window_w * 2, window_h);
-    Game game = Game(window,
+    Game *game = new Game(window,
                      renderer,
                      font,
                      font_small,
@@ -363,13 +364,14 @@ void Admin::play_2(int difficutly)
                      difficutly, // adjust difficulty here (AI)
                      new Human_player(renderer, 1, 0),
                      new AI_player(renderer, 2, window_w));
-    status = game.play();
+    status = game->play();
+    delete game;
 }
 
 void Admin::play_3()
 {
     SDL_SetWindowSize(window, window_w, window_h);
-    Game game = Game(window,
+    Game *game = new Game(window,
                      renderer,
                      font,
                      font_small,
@@ -378,5 +380,6 @@ void Admin::play_3()
                      status,
                      DIFFICULTY_IMPOSSIBLE,
                      new AI_player(renderer, 1, 0));
-    status = game.play();
+    status = game->play();
+    delete game;
 }

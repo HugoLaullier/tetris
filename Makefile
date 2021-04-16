@@ -1,36 +1,27 @@
 CC=g++
 CFLAGS= $(shell sdl2-config --cflags)
 LDFLAGS=  $(shell sdl2-config --libs) -lSDL2_ttf -lSDL2_mixer
-EXEC=tetris
-SRC=src
-HEADERS=src/headers
 
-all: $(EXEC)
+INCLUDE_PATH = ./include
 
-tetris: tetris.o utils.o positionInSpace.o tetrimino.o player.o game.o admin.o
-	$(CC) -o $@ $^ $(LDFLAGS)
+TARGET   = tetris
 
-tetris.o: $(SRC)/tetris.cpp $(HEADERS)/utils.hpp $(HEADERS)/positionInSpace.hpp $(HEADERS)/tetrimino.hpp $(HEADERS)/constants.hpp $(HEADERS)/game.hpp $(HEADERS)/player.hpp $(HEADERS)/admin.hpp
-	$(CC) -o $@ -c $< $(CFLAGS)
+SRCDIR   = src
+OBJDIR   = obj
 
-player.o: $(SRC)/player.cpp $(HEADERS)/player.hpp
-	$(CC) -o $@ -c $< $(CFLAGS)
+SOURCES  := $(wildcard $(SRCDIR)/*.cpp)
+INCLUDES := $(wildcard $(INCLUDE_PATH)/*.hpp)
+OBJECTS  := $(SOURCES:$(SRCDIR)/%.cpp=$(OBJDIR)/%.o)
 
-game.o: $(SRC)/game.cpp $(HEADERS)/game.hpp
-	$(CC) -o $@ -c $< $(CFLAGS)
+$(TARGET): $(OBJECTS)
+	$(CC) -o tetris $^ $(CFLAGS) $(LDFLAGS)
 
-admin.o: $(SRC)/admin.cpp $(HEADERS)/admin.hpp
-	$(CC) -o $@ -c $< $(CFLAGS)
+$(OBJECTS): $(OBJDIR)/%.o : $(SRCDIR)/%.cpp
+	mkdir -p $(OBJDIR)
+	$(CC) -o $@ -c $< $(CFLAGS) -I$(INCLUDE_PATH)
 
-utils.o: $(SRC)/utils.cpp $(HEADERS)/utils.hpp
-	$(CC) -o $@ -c $< $(CFLAGS)
-
-positionInSpace.o: $(SRC)/positionInSpace.cpp $(HEADERS)/positionInSpace.hpp
-	$(CC) -o $@ -c $< $(CFLAGS)
-
-tetrimino.o: $(SRC)/tetrimino.cpp $(HEADERS)/tetrimino.hpp $(HEADERS)/positionInSpace.hpp
-	$(CC) -o $@ -c $< $(CFLAGS)
-
+.PHONY : clean
 clean:
-	rm tetris
+	rm -f tetris
 	rm -rf *.o
+	rm -r obj
